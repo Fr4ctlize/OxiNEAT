@@ -1,6 +1,4 @@
-mod population;
-mod genome;
-mod network;
+
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,5 @@
 [package]
-name = "neat"
+name = "xor"
 version = "0.1.0"
 authors = ["Fr4ctlize <fortizk@outlook.com>"]
 edition = "2018"

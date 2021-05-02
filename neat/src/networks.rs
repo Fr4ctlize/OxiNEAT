@@ -56,13 +56,13 @@ impl<'a> Network<'a> {
     /// # Errors
     /// This function panics if the length of the passed
     /// slice is not equal to the number of inputs in the network.
-    pub fn set_inputs(&mut self, values: &[f64]) {
+    pub fn set_inputs(&mut self, values: &[f32]) {
         todo!()
     }
 
     /// Returns the current output node activation levels
     /// as a vector.
-    pub fn outputs(&self) -> Vec<f64> {
+    pub fn outputs(&self) -> Vec<f32> {
         todo!()
     }
 }

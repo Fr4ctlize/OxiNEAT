@@ -3,8 +3,8 @@ pub mod networks;
 pub mod populations;
 mod result;
 
-pub use genomes::{GeneticConfig};
-pub use populations::{PopConfig};
+pub use genomes::GeneticConfig;
+pub use populations::PopConfig;
 pub use result::Result;
 
 /// Identifier type used to designate historically

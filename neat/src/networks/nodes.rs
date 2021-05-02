@@ -1,6 +1,6 @@
 use super::Connection;
-use crate::Innovation;
 use crate::genomes::ActivationType;
+use crate::Innovation;
 
 /// Network equivalent of nodes in genomes.
 #[derive(Clone, Debug)]
@@ -8,8 +8,8 @@ pub struct Node<'a> {
     id: Innovation,
     pub(super) inputs: &'a Connection<'a>,
     pub(super) outputs: &'a Connection<'a>,
-    input_sum: f64,
-    activation: f64,
+    input_sum: f32,
+    activation: f32,
     function: ActivationType,
 }
 
@@ -37,7 +37,7 @@ impl<'a> Node<'a> {
     }
 
     /// Adds `x` to the node's input sum.
-    pub fn add_to_input_sum(&mut self, x: f64) {
+    pub fn add_to_input_sum(&mut self, x: f32) {
         todo!()
     }
 

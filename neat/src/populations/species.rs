@@ -21,11 +21,11 @@ pub struct SpeciesID(usize, usize);
 /// to exist (as in this implementation), or a
 /// randomly chosen member of the species each
 /// generation.
-/// 
+///
 /// Species will stagnate after [`stagnation_threshold`]
 /// generations without improving the species' fitness,
 /// and will thereafter be penalized when mating.
-/// 
+///
 /// [genetic distance]: crate::populations::PopConfig::distance_threshold
 /// [`stagnation_threshold`]: crate::populations::PopConfig::survival_threshold
 #[derive(Debug)]
@@ -34,7 +34,7 @@ pub struct Species<'a> {
     genomes: Vec<&'a Genome>,
     representative: Genome,
     stagnation: usize,
-    shared_fitness: f64,
+    shared_fitness: f32,
 }
 
 impl<'a> Species<'a> {
@@ -62,7 +62,7 @@ impl<'a> Species<'a> {
     /// Generates the species' assigned offspring,
     /// keeping the [species' elite] and mating the
     /// [top performers].
-    /// 
+    ///
     /// [species' elite]: crate::populations::PopConfig::elitism;
     /// [top performers]: crate::populations::PopConfig::survival_threshold;
     pub fn generate_offspring(&self, assigned_offspring: usize, pop: Population) -> Vec<Genome> {
@@ -72,18 +72,23 @@ impl<'a> Species<'a> {
     /// Returns the species' _member-count adjusted_
     /// fitness. I.e., the average of the species'
     /// genome's fitnesses.
-    pub fn adjusted_fitness(&self) -> f64 {
+    pub fn adjusted_fitness(&self) -> f32 {
         todo!()
     }
 
     /// Returns the number of generations the species
-    /// has been stagnated. 
+    /// has been stagnated.
     pub fn time_stagnated(&self) -> usize {
         todo!()
     }
 
     /// Returns a random sample of the species' members.
     pub fn random_sample(&self, n: usize) -> Vec<&'a Genome> {
+        todo!()
+    }
+
+    /// Returns the species' members.
+    pub fn genomes(&self) -> Vec<&'a Genome> {
         todo!()
     }
 }

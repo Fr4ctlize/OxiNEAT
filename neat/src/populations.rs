@@ -22,7 +22,7 @@ pub struct Population<'a> {
 
 impl<'a> Population<'a> {
     /// Creates a new population using the passed configurations.
-    /// 
+    ///
     /// These configurations shouldn't be modified once evolution
     /// begins, thus they are copied and kept by the population for
     /// the duration of its lifetime.
@@ -32,22 +32,19 @@ impl<'a> Population<'a> {
 
     /// Evaluates the fitness of each genome in the
     /// population using the passed evaluator.
-    pub fn evaluate_fitness(
-        &mut self,
-        evaluator: fn(&Genome) -> f64,
-    ) {
+    pub fn evaluate_fitness(&mut self, evaluator: fn(&Genome) -> f32) {
         todo!()
     }
 
     /// Evolves the population by mating the best performing
     /// genomes of each species, and re-speciating genomes
     /// as appropiate.
-    /// 
+    ///
     /// If the [adoption rate] is different from 1, offspring
     /// will have a chance of being placed into their parent's
     /// species without speciation, which seems to help NEAT
     /// find solutions faster. (See [[Nodine, T., 2010]].)
-    /// 
+    ///
     /// [Nodine, T., 2010]: https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.175.2884&rep=rep1&type=pdf
     /// [adoption rate]: crate::populations::PopConfig::adoption_rate
     pub fn evolve(&mut self) {

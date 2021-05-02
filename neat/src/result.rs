@@ -3,15 +3,29 @@
 /// errors for internal purposes.
 pub type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Debug)]
 pub struct Error {
-    error: ErrorType,
+    pub(crate) error: ErrorType,
+}
+
+pub(crate) fn fatal(e: &str) -> Error {
+    Error {
+        error: ErrorType::Fatal(e.to_string()),
+    }
+}
+
+pub(crate) fn nonfatal(e: &str) -> Error {
+    Error {
+        error: ErrorType::Nonfatal(e.to_string()),
+    }
 }
 
 /// Fatal errors should return control
 /// to the user, while non-fatal errors
 /// can be safely ignored, but are returned
 /// to the user for informative purposes.
-enum ErrorType {
-    Fatal(Box<dyn std::error::Error + Send>),
-    Nonfatal(Box<dyn std::error::Error + Send>),
+#[derive(Debug)]
+pub(crate) enum ErrorType {
+    Fatal(String),
+    Nonfatal(String),
 }

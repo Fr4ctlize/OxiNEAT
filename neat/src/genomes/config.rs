@@ -12,6 +12,13 @@ pub struct GeneticConfig {
     pub output_count: NonZeroUsize,
     /// Possible activation types for nodes in a genome.
     pub activation_types: Vec<ActivationType>,
+    /// Activation types of output nodes in a genome.
+    /// If fewer than [`output_count`] are specified,
+    /// the default is [`Sigmoid`].
+    /// 
+    /// [`output_count`]: crate::genomes::config::GeneticConfig::output_count;
+    /// [`Sigmoid`]: crate::genomes::nodes::ActivationType;
+    pub output_activation_types: Vec<ActivationType>,
     /// Chance of producing a mutated clone of a parent
     /// during mating.
     pub mutate_only_chance: f32,
@@ -61,6 +68,7 @@ impl Default for GeneticConfig {
             input_count: NonZeroUsize::new(1).unwrap(),
             output_count: NonZeroUsize::new(1).unwrap(),
             activation_types: vec![],
+            output_activation_types: vec![],
             mutate_only_chance: 0.0,
             mate_only_chance: 0.0,
             mate_by_averaging_chance: 0.0,

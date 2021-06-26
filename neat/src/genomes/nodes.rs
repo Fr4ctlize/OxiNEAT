@@ -9,7 +9,7 @@ use std::collections::HashSet;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ActivationType {
     Sigmoid,
-    Linear,
+    Identity,
     ReLU,
     Gaussian,
     Sinusoidal,

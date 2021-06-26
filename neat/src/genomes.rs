@@ -41,13 +41,20 @@ impl Genome {
         let mut node_pairings = HashSet::new();
 
         for i in 0..input_count {
-            nodes.insert(i, Node::new(i, NodeType::Sensor, ActivationType::Linear));
+            nodes.insert(i, Node::new(i, NodeType::Sensor, ActivationType::Identity));
         }
 
         for o in 0..output_count {
             nodes.insert(
                 o + input_count,
-                Node::new(o + input_count, NodeType::Actuator, ActivationType::Sigmoid),
+                Node::new(
+                    o + input_count,
+                    NodeType::Actuator,
+                    *config
+                        .output_activation_types
+                        .get(o)
+                        .unwrap_or(&ActivationType::Sigmoid),
+                ),
             );
         }
 
@@ -206,7 +213,7 @@ impl Genome {
                 }
             })
             .collect();
-        if potential_inputs.len() == 0 {
+        if potential_inputs.is_empty() {
             return Err(result::nonfatal("no viable input found"));
         }
 
@@ -222,8 +229,11 @@ impl Genome {
         let mut source_node = 0;
         let mut dest_node = None;
 
-        for i in 0..config.max_gene_mutation_attempts {
-            let candidate_input = self.nodes.get(&potential_inputs[i]).unwrap();
+        for i in potential_inputs
+            .iter()
+            .take(config.max_gene_mutation_attempts)
+        {
+            let candidate_input = self.nodes.get(i).unwrap();
             // Try to make a recursive gene.
             if candidate_input.node_type() != NodeType::Sensor
                 && rng.gen::<f32>() < config.recursion_chance
@@ -277,11 +287,7 @@ impl Genome {
     ) -> Result<(&Gene, &Node, &Gene)> {
         // All unsuppressed genes are candidates to
         // be "split" in a node mutation.
-        let candidate_genes: Vec<&Gene> = self
-            .genes
-            .values()
-            .filter_map(|g| if g.suppressed { None } else { Some(g) })
-            .collect();
+        let candidate_genes: Vec<&Gene> = self.genes.values().filter(|g| !g.suppressed).collect();
 
         // Choose a random candidate to split.
         let mut rng = rand::thread_rng();
@@ -408,7 +414,7 @@ impl Genome {
 
         for (id, gene) in &other.genes {
             if !self.node_pairings.contains(&(gene.input(), gene.output())) {
-                self.add_gene(*id, gene.input(), gene.output(), gene.weight())?;
+                self.add_gene(*id, gene.input(), gene.output(), gene.weight)?;
             }
         }
 
@@ -505,8 +511,8 @@ impl Genome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::num::NonZeroUsize;
     use result::ErrorType;
+    use std::num::NonZeroUsize;
 
     #[test]
     fn new_fully_connected() {
@@ -516,6 +522,13 @@ mod tests {
                 config.initial_expression_chance = 1.0;
                 config.input_count = NonZeroUsize::new(input_count).unwrap();
                 config.output_count = NonZeroUsize::new(output_count).unwrap();
+                config.output_activation_types = vec![
+                    ActivationType::Sigmoid,
+                    ActivationType::Gaussian,
+                    ActivationType::Identity,
+                    ActivationType::ReLU,
+                    ActivationType::Sinusoidal,
+                ];
 
                 let full_genome = Genome::new(&config);
                 assert_eq!(full_genome.genes.len(), input_count * output_count);
@@ -523,7 +536,8 @@ mod tests {
                     full_genome
                         .nodes
                         .values()
-                        .filter(|n| n.node_type() == NodeType::Sensor)
+                        .filter(|n| n.node_type() == NodeType::Sensor
+                            && n.activation_type() == ActivationType::Identity)
                         .count(),
                     input_count
                 );
@@ -531,7 +545,12 @@ mod tests {
                     full_genome
                         .nodes
                         .values()
-                        .filter(|n| n.node_type() == NodeType::Actuator)
+                        .filter(|n| n.node_type() == NodeType::Actuator
+                            && n.activation_type()
+                                == *config
+                                    .output_activation_types
+                                    .get(n.innovation() - input_count)
+                                    .unwrap_or(&ActivationType::Sigmoid))
                         .count(),
                     output_count
                 );
@@ -590,7 +609,7 @@ mod tests {
         assert_eq!(gene.innovation(), INNOVATION);
         assert_eq!(gene.input(), INPUT);
         assert_eq!(gene.output(), OUTPUT);
-        assert_eq!(gene.weight(), WEIGHT);
+        assert_eq!(gene.weight, WEIGHT);
 
         let gene = gene.clone();
 
@@ -757,9 +776,9 @@ mod tests {
         config.weight_mutation_power = 3.0;
 
         let mut genome = Genome::new(&config);
-        let initial_weight = genome.genes.get(&0).unwrap().weight();
+        let initial_weight = genome.genes.get(&0).unwrap().weight;
         genome.mutate_weights(&config);
-        assert_ne!(initial_weight, genome.genes.get(&0).unwrap().weight());
+        assert_ne!(initial_weight, genome.genes.get(&0).unwrap().weight);
     }
 
     /// It is possible this test will fail
@@ -777,9 +796,9 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         genome.mutate_weights(&config);
-        let initial_weight = genome.genes.get(&0).unwrap().weight();
+        let initial_weight = genome.genes.get(&0).unwrap().weight;
         genome.mutate_weights(&config);
-        assert_ne!(initial_weight, genome.genes.get(&0).unwrap().weight());
+        assert_ne!(initial_weight, genome.genes.get(&0).unwrap().weight);
     }
 
     #[test]
@@ -792,9 +811,9 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         genome.mutate_weights(&config);
-        let initial_weight = genome.genes.get(&0).unwrap().weight();
+        let initial_weight = genome.genes.get(&0).unwrap().weight;
         genome.mutate_weights(&config);
-        assert_eq!(initial_weight, genome.genes.get(&0).unwrap().weight());
+        assert_eq!(initial_weight, genome.genes.get(&0).unwrap().weight);
     }
 
     #[test]

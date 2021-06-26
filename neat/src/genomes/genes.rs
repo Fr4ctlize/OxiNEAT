@@ -11,8 +11,8 @@ pub struct Gene {
     id: Innovation,
     input: Innovation,
     output: Innovation,
-    pub(super) weight: f32,
-    pub(super) suppressed: bool,
+    pub weight: f32,
+    pub suppressed: bool,
 }
 
 impl Gene {
@@ -70,16 +70,6 @@ impl Gene {
     /// Returns the gene's output node's innovation number.
     pub fn output(&self) -> Innovation {
         self.output
-    }
-
-    /// Returns the gene's weight.
-    pub fn weight(&self) -> f32 {
-        self.weight
-    }
-
-    /// Returns the gene's suppression status.
-    pub fn suppressed(&self) -> bool {
-        self.suppressed
     }
 }
 

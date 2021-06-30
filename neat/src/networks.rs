@@ -4,7 +4,6 @@ use connections::Connection;
 use nodes::Node;
 
 use crate::genomes::{Genome, NodeType};
-use crate::Result;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -24,7 +23,7 @@ pub struct Network {
 
 impl Network {
     /// Generates a new network from the passed genome.
-    pub fn from(genome: &Genome) -> Result<Network> {
+    pub fn from(genome: &Genome) -> Network {
         let mut network = Network {
             inputs: vec![],
             hidden: vec![],
@@ -73,7 +72,7 @@ impl Network {
             node.borrow_mut().outputs.sort_unstable_by_key(|c| c.id());
         }
 
-        Ok(network)
+        network
     }
 
     /// Computes the input sum of each node in the network,
@@ -174,8 +173,6 @@ mod tests {
         genome.add_gene(1, 0, 3, -1.0).unwrap().suppressed = true;
 
         let network = Network::from(&genome);
-        assert!(network.is_ok());
-        let network = network.unwrap();
         assert_eq!(network.inputs.len(), 2);
         assert_eq!(network.outputs.len(), 2);
         assert_eq!(network.hidden.len(), 1);
@@ -242,7 +239,7 @@ mod tests {
     #[test]
     fn activate_empty() {
         let genome = Genome::new(&GeneticConfig::default());
-        let mut network = Network::from(&genome).unwrap();
+        let mut network = Network::from(&genome);
         assert!((0..100).all(|_| {
             network.activate();
             network.outputs()[0] == 0.0
@@ -253,7 +250,7 @@ mod tests {
     fn activate_single() {
         let mut genome = Genome::new(&GeneticConfig::default());
         genome.add_gene(0, 0, 1, 1.0).unwrap();
-        let mut network = Network::from(&genome).unwrap();
+        let mut network = Network::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
             network.clear_state();
@@ -268,7 +265,7 @@ mod tests {
         let mut genome = Genome::new(&GeneticConfig::default());
         genome.add_gene(0, 0, 1, 1.0).unwrap();
         genome.add_gene(1, 1, 1, -1.0).unwrap(); // Recursive connection
-        let mut network = Network::from(&genome).unwrap();
+        let mut network = Network::from(&genome);
         let mut prev_output = 0.0;
         for input in -20..=20 {
             let input = input as f32 / 10.0;
@@ -285,7 +282,7 @@ mod tests {
         genome.add_node(2, ActivationType::Sigmoid).unwrap();
         genome.add_gene(0, 0, 2, 1.0).unwrap();
         genome.add_gene(1, 2, 1, 1.0).unwrap();
-        let mut network = Network::from(&genome).unwrap();
+        let mut network = Network::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
             network.clear_state();
@@ -304,7 +301,7 @@ mod tests {
         genome.add_gene(0, 0, 3, -1.0).unwrap();
         genome.add_gene(1, 1, 3, 1.0).unwrap();
         genome.add_gene(2, 2, 3, 0.5).unwrap();
-        let mut network = Network::from(&genome).unwrap();
+        let mut network = Network::from(&genome);
         for ((x, y), z) in (-20..=20).zip(-20..=20).zip(-20..=20) {
             let (x, y, z) = (x as f32 / 10.0, y as f32 / 10.0, z as f32 / 10.0);
             network.clear_state();
@@ -327,7 +324,7 @@ mod tests {
         genome.add_node(2, ActivationType::Sigmoid).unwrap();
         genome.add_gene(0, 0, 2, 1.0).unwrap();
         genome.add_gene(1, 2, 1, 1.0).unwrap();
-        let mut network = Network::from(&genome).unwrap();
+        let mut network = Network::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
             network.clear_state();

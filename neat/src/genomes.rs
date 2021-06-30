@@ -8,7 +8,6 @@ pub use genes::Gene;
 pub use history::History;
 pub use nodes::{ActivationType, Node, NodeType};
 
-use crate::result::{self, Result};
 use crate::Innovation;
 
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
@@ -26,7 +25,7 @@ pub struct Genome {
     genes: HashMap<Innovation, Gene>,
     nodes: HashMap<Innovation, Node>,
     node_pairings: HashSet<(Innovation, Innovation)>,
-    pub fitness: f32,
+    pub(in crate) fitness: f32,
     max_innovation: Innovation,
 }
 
@@ -96,7 +95,7 @@ impl Genome {
     ///
     /// # Errors
     ///
-    /// This function will return a fatal error if a gene with the same
+    /// This function will return an error if a gene with the same
     /// `gene_id` already existed in the genome, or if either `input_id`
     /// or `output_id` do not correspond to nodes present in the genome.
     pub fn add_gene(
@@ -105,39 +104,66 @@ impl Genome {
         input_id: Innovation,
         output_id: Innovation,
         weight: f32,
-    ) -> Result<&mut Gene> {
-        match self.genes.entry(gene_id) {
-            Entry::Vacant(_)
-                if !(self.nodes.contains_key(&input_id) && self.nodes.contains_key(&output_id)) =>
-            {
-                Err(result::fatal(&format!(
-                    "gene insertion with nonexistant endpoint(s) ({}, {})",
-                    input_id, output_id
-                )))
-            }
-            Entry::Vacant(_) if self.node_pairings.contains(&(input_id, output_id)) => {
-                Err(result::fatal(&format!(
-                    "duplicate gene insertion between nodes {} and {} with alternate ID {}",
-                    input_id, output_id, gene_id
-                )))
-            }
-            Entry::Vacant(entry) => {
-                self.nodes
-                    .get_mut(&input_id)
-                    .unwrap()
-                    .add_output_gene(gene_id)?;
-                self.nodes
-                    .get_mut(&output_id)
-                    .unwrap()
-                    .add_input_gene(gene_id)?;
-                self.max_innovation = self.max_innovation.max(gene_id);
-                self.node_pairings.insert((input_id, output_id));
-                Ok(entry.insert(Gene::new(gene_id, input_id, output_id, weight)))
-            }
-            Entry::Occupied(_) => Err(result::fatal(&format!(
-                "duplicate gene insertion with ID {}",
-                gene_id
-            ))),
+    ) -> Result<&mut Gene, String> {
+        match self.check_gene_viability(gene_id, input_id, output_id) {
+            Ok(_) => unsafe { self.add_gene_unchecked(gene_id, input_id, output_id, weight) },
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Add a new gene to the genome.
+    /// Returns a reference to the new gene.
+    /// Assumes that the gene is not a duplicate
+    /// or invalid gene for the genome.
+    unsafe fn add_gene_unchecked(
+        &mut self,
+        gene_id: Innovation,
+        input_id: Innovation,
+        output_id: Innovation,
+        weight: f32,
+    ) -> Result<&mut Gene, String> {
+        self.nodes
+            .get_mut(&input_id)
+            .unwrap()
+            .add_output_gene(gene_id)?;
+        self.nodes
+            .get_mut(&output_id)
+            .unwrap()
+            .add_input_gene(gene_id)?;
+        self.max_innovation = self.max_innovation.max(gene_id);
+        self.node_pairings.insert((input_id, output_id));
+        Ok(self
+            .genes
+            .entry(gene_id)
+            .or_insert(Gene::new(gene_id, input_id, output_id, weight)))
+    }
+
+    /// Checks whether a gene is a duplicate or
+    /// is invalid for the genome.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the gene is not viable.
+    fn check_gene_viability(
+        &self,
+        gene_id: Innovation,
+        input_id: Innovation,
+        output_id: Innovation,
+    ) -> Result<(), String> {
+        if self.genes.contains_key(&gene_id) {
+            Err(format!("duplicate gene insertion with ID {}", gene_id))
+        } else if !(self.nodes.contains_key(&input_id) && self.nodes.contains_key(&output_id)) {
+            Err(format!(
+                "gene insertion with nonexistant endpoint(s) ({}, {})",
+                input_id, output_id
+            ))
+        } else if self.node_pairings.contains(&(input_id, output_id)) {
+            Err(format!(
+                "duplicate gene insertion between nodes {} and {} with alternate ID {}",
+                input_id, output_id, gene_id
+            ))
+        } else {
+            Ok(())
         }
     }
 
@@ -146,21 +172,43 @@ impl Genome {
     ///
     /// # Errors
     ///
-    /// This function returns a fatal Error if a node of the
+    /// This function returns an error if a node of the
     /// same ID already existed in the genome.
     pub fn add_node(
         &mut self,
         node_id: Innovation,
         activation_type: ActivationType,
-    ) -> Result<&mut Node> {
-        match self.nodes.entry(node_id) {
-            Entry::Vacant(entry) => {
-                Ok(entry.insert(Node::new(node_id, NodeType::Neuron, activation_type)))
-            }
-            Entry::Occupied(_) => Err(result::fatal(&format!(
-                "duplicate node insertion with ID {}",
-                node_id
-            ))),
+    ) -> Result<&mut Node, String> {
+        match self.check_node_viability(node_id) {
+            Ok(_) => unsafe { Ok(self.add_node_unchecked(node_id, activation_type)) },
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Add a new node to the genome.
+    /// Returns a reference  to the newly created node.
+    /// Assumes the node is not a duplicate.
+    unsafe fn add_node_unchecked(
+        &mut self,
+        node_id: Innovation,
+        activation_type: ActivationType,
+    ) -> &mut Node {
+        self.nodes
+            .entry(node_id)
+            .or_insert(Node::new(node_id, NodeType::Neuron, activation_type))
+    }
+
+    /// Checks whether a node is a duplicate
+    /// for the genome.
+    ///
+    /// # Errors
+    ///
+    /// Rertuns an error in case of a duplicate.
+    fn check_node_viability(&self, node_id: Innovation) -> Result<(), String> {
+        if self.nodes.contains_key(&node_id) {
+            Err(format!("duplicate node insertion with ID {}", node_id))
+        } else {
+            Ok(())
         }
     }
 
@@ -185,7 +233,11 @@ impl Genome {
     /// exists or [too many] attempts have failed.
     ///
     /// [too many]: crate::genomes::GeneticConfig::max_gene_mutation_attempts
-    pub fn mutate_genes(&mut self, history: &mut History, config: &GeneticConfig) -> Result<&Gene> {
+    pub fn mutate_genes(
+        &mut self,
+        history: &mut History,
+        config: &GeneticConfig,
+    ) -> Result<&Gene, String> {
         // All nodes that are not inputs can be potential
         // outputs for the new gene.
         let potential_outputs: HashSet<Innovation> = self
@@ -214,7 +266,7 @@ impl Genome {
             })
             .collect();
         if potential_inputs.is_empty() {
-            return Err(result::nonfatal("no viable input found"));
+            return Err("no viable input found".to_string());
         }
 
         let mut rng = rand::thread_rng();
@@ -268,7 +320,7 @@ impl Genome {
                 history.add_gene_innovation(source_node, dest_node);
                 Ok(gene)
             }
-            None => Err(result::nonfatal("no valid input-output pair found")),
+            None => Err("no valid input-output pair found".to_string()),
         }
     }
 
@@ -284,7 +336,7 @@ impl Genome {
         &mut self,
         history: &mut History,
         config: &GeneticConfig,
-    ) -> Result<(&Gene, &Node, &Gene)> {
+    ) -> Result<(&Gene, &Node, &Gene), String> {
         // All unsuppressed genes are candidates to
         // be "split" in a node mutation.
         let candidate_genes: Vec<&Gene> = self.genes.values().filter(|g| !g.suppressed).collect();
@@ -294,9 +346,9 @@ impl Genome {
         let gene_to_split = match candidate_genes.choose(&mut rng) {
             Some(gene_to_split) => gene_to_split.innovation(),
             None => {
-                return Err(result::nonfatal(
-                    "attempted node mutation on empty or completely suppressed genome",
-                ))
+                return Err(
+                    "attempted node mutation on empty or completely suppressed genome".to_string(),
+                )
             }
         };
 
@@ -317,26 +369,42 @@ impl Genome {
             history.add_node_innovation(gene_to_split, true);
         }
 
+        let (input_node, output_node) = {
+            let gene_to_split = self.genes.get(&gene_to_split).unwrap();
+            (gene_to_split.input(), gene_to_split.output())
+        };
+        // Do all safety checks before modifying the genome,
+        // to avoid leaving the genome in an incorrect state.
+        if let Err(e) = self.check_node_viability(new_node) {
+            return Err(e);
+        }
+        if let Err(e) = self.check_gene_viability(input_gene, input_node, new_node) {
+            return Err(e);
+        }
+        if let Err(e) = self.check_gene_viability(output_gene, new_node, output_node) {
+            return Err(e);
+        }
         // Borrow the split gene to suppress it and get
         // its input and output.
         let gene_to_split = self.genes.get_mut(&gene_to_split).unwrap();
-        let (input_node, output_node) = (gene_to_split.input(), gene_to_split.output());
         gene_to_split.suppressed = true;
 
         // Add the new node and genes to the genome, and return.
-        self.add_node(new_node, *config.activation_types.choose(&mut rng).unwrap())?;
-        self.add_gene(
-            input_gene,
-            input_node,
-            new_node,
-            Gene::random_weight(config),
-        )?;
-        self.add_gene(
-            output_gene,
-            new_node,
-            output_node,
-            Gene::random_weight(config),
-        )?;
+        unsafe {
+            self.add_node_unchecked(new_node, *config.activation_types.choose(&mut rng).unwrap());
+            self.add_gene_unchecked(
+                input_gene,
+                input_node,
+                new_node,
+                Gene::random_weight(config),
+            )?;
+            self.add_gene_unchecked(
+                output_gene,
+                new_node,
+                output_node,
+                Gene::random_weight(config),
+            )?;
+        }
 
         Ok((
             self.genes.get(&input_gene).unwrap(),
@@ -361,7 +429,7 @@ impl Genome {
         other: &Genome,
         history: &mut History,
         config: &GeneticConfig,
-    ) -> Result<Genome> {
+    ) -> Result<Genome, String> {
         let (parent1, parent2) = if self.fitness >= other.fitness {
             (self, other)
         } else {
@@ -386,7 +454,7 @@ impl Genome {
     }
 
     /// Performs all mutations on self.
-    fn mutate_all(&mut self, history: &mut History, config: &GeneticConfig) -> Result<()> {
+    fn mutate_all(&mut self, history: &mut History, config: &GeneticConfig) -> Result<(), String> {
         self.mutate_weights(config);
         self.mutate_nodes(history, config)?;
         self.mutate_genes(history, config)?;
@@ -394,7 +462,7 @@ impl Genome {
     }
 
     /// Adds all uncommon structure and combines genes to `self`.
-    fn combine(&mut self, other: &Genome, config: &GeneticConfig) -> Result<()> {
+    fn combine(&mut self, other: &Genome, config: &GeneticConfig) -> Result<(), String> {
         self.add_noncommon_structure(other)?;
         if rand::thread_rng().gen::<f32>() < config.mate_by_averaging_chance {
             self.combines_genes_average(other);
@@ -405,7 +473,7 @@ impl Genome {
     }
 
     /// Adds all genes and nodes not common to both genomes to `self`.
-    fn add_noncommon_structure(&mut self, other: &Genome) -> Result<()> {
+    fn add_noncommon_structure(&mut self, other: &Genome) -> Result<(), String> {
         for (id, node) in &other.nodes {
             if !self.nodes.contains_key(&id) {
                 self.add_node(*id, node.activation_type())?;
@@ -511,7 +579,6 @@ impl Genome {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use result::ErrorType;
     use std::num::NonZeroUsize;
 
     #[test]
@@ -594,7 +661,7 @@ mod tests {
     }
 
     #[test]
-    fn add_gene() -> Result<()> {
+    fn add_gene() -> Result<(), String> {
         const INNOVATION: Innovation = 631;
         const INPUT: Innovation = 0;
         const OUTPUT: Innovation = 1;
@@ -631,11 +698,7 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
-        if let Err(e) = gene {
-            if let ErrorType::Nonfatal(_) = e.error {
-                panic!("duplicate gene addition should return fatal error");
-            }
-        } else {
+        if let Ok(_) = gene {
             panic!("duplicate gene addition should return error");
         }
     }
@@ -665,11 +728,7 @@ mod tests {
             .innovation();
 
         let gene = genome.add_gene(INNOVATION, input, output, WEIGHT);
-        if let Err(e) = gene {
-            if let ErrorType::Nonfatal(_) = e.error {
-                panic!("duplicate gene addition should return fatal error");
-            }
-        } else {
+        if let Ok(_) = gene {
             panic!("duplicate gene addition should return error");
         }
     }
@@ -686,11 +745,7 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
-        if let Err(e) = gene {
-            if let ErrorType::Nonfatal(_) = e.error {
-                panic!("invalid input node should return fatal error");
-            }
-        } else {
+        if let Ok(_) = gene {
             panic!("invalid input node should return error");
         }
     }
@@ -707,17 +762,13 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
-        if let Err(e) = gene {
-            if let ErrorType::Nonfatal(_) = e.error {
-                panic!("invalid output node should return fatal error");
-            }
-        } else {
+        if let Ok(_) = gene {
             panic!("invalid output node should return error");
         }
     }
 
     #[test]
-    fn add_node() -> Result<()> {
+    fn add_node() -> Result<(), String> {
         const INPUTS: usize = 1;
         const OUTPUTS: usize = 1;
         const INNOVATION: Innovation = 42;
@@ -755,11 +806,7 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         let node = genome.add_node(INNOVATION, ACTIVATION_TYPE);
-        if let Err(e) = node {
-            if let ErrorType::Nonfatal(_) = e.error {
-                panic!("duplicate node addition should return fatal error");
-            }
-        } else {
+        if let Ok(_) = node {
             panic!("duplicate node addition should return error");
         }
     }
@@ -817,7 +864,7 @@ mod tests {
     }
 
     #[test]
-    fn mutate_genes() -> Result<()> {
+    fn mutate_genes() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.initial_expression_chance = 1.0;
         config.gene_mutation_chance = 1.0;
@@ -842,7 +889,7 @@ mod tests {
     }
 
     #[test]
-    fn mutate_genes_recursive() -> Result<()> {
+    fn mutate_genes_recursive() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.initial_expression_chance = 1.0;
         config.gene_mutation_chance = 1.0;
@@ -882,17 +929,13 @@ mod tests {
 
         let gene = genome.mutate_genes(&mut history, &config);
 
-        if let Err(e) = gene {
-            if let ErrorType::Fatal(_) = e.error {
-                panic!("no viable node pairs error should be non-fatal");
-            }
-        } else {
+        if let Ok(_) = gene {
             panic!("gene mutation with no viable node pairs should return an error");
         }
     }
 
     #[test]
-    fn mutate_nodes() -> Result<()> {
+    fn mutate_nodes() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.activation_types = vec![ActivationType::Sigmoid, ActivationType::ReLU];
         config.initial_expression_chance = 1.0;
@@ -934,17 +977,13 @@ mod tests {
         let mut genome = Genome::new(&config);
         let node = genome.mutate_nodes(&mut history, &config);
 
-        if let Err(e) = node {
-            if let ErrorType::Fatal(_) = e.error {
-                panic!("no gene found error should be non-fatal");
-            }
-        } else {
+        if let Ok(_) = node {
             panic!("node mutation on empty genome should return an error");
         }
     }
 
     #[test]
-    fn add_noncommon_structure() -> Result<()> {
+    fn add_noncommon_structure() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -976,7 +1015,7 @@ mod tests {
     }
 
     #[test]
-    fn combines_genes_average() -> Result<()> {
+    fn combines_genes_average() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1007,7 +1046,7 @@ mod tests {
     }
 
     #[test]
-    fn combines_genes_random_choice() -> Result<()> {
+    fn combines_genes_random_choice() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1038,7 +1077,7 @@ mod tests {
     }
 
     #[test]
-    fn reset_suppressions() -> Result<()> {
+    fn reset_suppressions() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1058,7 +1097,7 @@ mod tests {
     }
 
     #[test]
-    fn genetic_distance_to() -> Result<()> {
+    fn genetic_distance_to() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1093,7 +1132,7 @@ mod tests {
     }
 
     #[test]
-    fn genetic_distance_to_equal() -> Result<()> {
+    fn genetic_distance_to_equal() -> Result<(), String> {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();

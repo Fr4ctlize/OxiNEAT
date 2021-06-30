@@ -1,4 +1,3 @@
-use crate::result::*;
 use crate::Innovation;
 
 use std::collections::HashSet;
@@ -52,31 +51,31 @@ impl Node {
 
     /// Adds the passed innovation number to the node's
     /// list of input genes.
-    pub fn add_input_gene(&mut self, input_id: Innovation) -> Result<()> {
+    pub fn add_input_gene(&mut self, input_id: Innovation) -> Result<(), String> {
         if !self.inputs.contains(&input_id) {
             self.inputs.insert(input_id);
             Ok(())
         } else {
             dbg!(&self);
-            Err(nonfatal(&format!(
+            Err(format!(
                 "attempted to add duplicate input with ID {}",
                 input_id
-            )))
+            ))
         }
     }
 
     /// Adds the passed innovation number to the node's
     /// list of output genes.
-    pub fn add_output_gene(&mut self, output_id: Innovation) -> Result<()> {
+    pub fn add_output_gene(&mut self, output_id: Innovation) -> Result<(), String> {
         if !self.outputs.contains(&output_id) {
             self.outputs.insert(output_id);
             Ok(())
         } else {
             dbg!(&self);
-            Err(nonfatal(&format!(
+            Err(format!(
                 "attempted to add duplicate output with ID {}",
                 output_id
-            )))
+            ))
         }
     }
 

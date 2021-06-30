@@ -11,8 +11,8 @@ pub struct Gene {
     id: Innovation,
     input: Innovation,
     output: Innovation,
-    pub weight: f32,
-    pub suppressed: bool,
+    pub(in crate) weight: f32,
+    pub(in crate) suppressed: bool,
 }
 
 impl Gene {

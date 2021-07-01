@@ -135,7 +135,7 @@ impl Genome {
         Ok(self
             .genes
             .entry(gene_id)
-            .or_insert(Gene::new(gene_id, input_id, output_id, weight)))
+            .or_insert_with(|| Gene::new(gene_id, input_id, output_id, weight)))
     }
 
     /// Checks whether a gene is a duplicate or
@@ -195,7 +195,7 @@ impl Genome {
     ) -> &mut Node {
         self.nodes
             .entry(node_id)
-            .or_insert(Node::new(node_id, NodeType::Neuron, activation_type))
+            .or_insert_with(|| Node::new(node_id, NodeType::Neuron, activation_type))
     }
 
     /// Checks whether a node is a duplicate
@@ -366,7 +366,7 @@ impl Genome {
             new_node = node;
             output_gene = output;
         } else {
-            history.add_node_innovation(gene_to_split, true);
+            history.add_node_innovation(gene_to_split, false);
         }
 
         let (input_node, output_node) = {
@@ -376,12 +376,6 @@ impl Genome {
         // Do all safety checks before modifying the genome,
         // to avoid leaving the genome in an incorrect state.
         if let Err(e) = self.check_node_viability(new_node) {
-            return Err(e);
-        }
-        if let Err(e) = self.check_gene_viability(input_gene, input_node, new_node) {
-            return Err(e);
-        }
-        if let Err(e) = self.check_gene_viability(output_gene, new_node, output_node) {
             return Err(e);
         }
         // Borrow the split gene to suppress it and get

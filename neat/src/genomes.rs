@@ -11,7 +11,7 @@ pub use nodes::{ActivationType, Node, NodeType};
 use crate::Innovation;
 
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
-use std::collections::hash_map::{Entry, HashMap};
+use std::collections::hash_map::{HashMap};
 use std::collections::HashSet;
 
 /// Genomes are the focus of evolution in NEAT.
@@ -311,7 +311,7 @@ impl Genome {
         }
 
         // If a viable node pair was found, add a new gene
-        // in between. Otherwise, return a nonfatal error.
+        // in between. Otherwise, return with error.
         match dest_node {
             Some(dest_node) => {
                 let gene_id = history.next_gene_innovation(source_node, dest_node);
@@ -524,7 +524,7 @@ impl Genome {
 
     /// Calculates the _genetic distance_ between `self` and `other`,
     /// weighting node and weight differences as specified in `config`.
-    pub fn genetic_distance_to(&mut self, other: &Genome, config: &GeneticConfig) -> f32 {
+    pub fn genetic_distance_to(&self, other: &Genome, config: &GeneticConfig) -> f32 {
         let max_g1 = self.genes.keys().max().unwrap_or(&0);
         let max_g2 = self.genes.keys().max().unwrap_or(&0);
 

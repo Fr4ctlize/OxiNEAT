@@ -2,5 +2,6 @@
 
 members = [
     "neat",
-    "hyperneat"
+    "hyperneat",
+    "xor"
 ]

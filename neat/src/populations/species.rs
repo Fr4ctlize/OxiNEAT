@@ -1,7 +1,4 @@
-use super::PopConfig;
-use super::Population;
-use crate::genomes::GeneticConfig;
-use crate::genomes::{Genome, History};
+use crate::genomes::{GeneticConfig, Genome};
 
 /// Species identifier. Specifies
 /// the generation in which the species
@@ -10,8 +7,8 @@ use crate::genomes::{Genome, History};
 /// the one identified (i.e, if it was the
 /// third species born in generation 5, it
 /// will be species [5, 2]).
-#[derive(Debug)]
-pub struct SpeciesID(usize, usize);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SpeciesID(pub usize, pub usize);
 
 /// Species are collections of reproductively
 /// compatible (within a certain [genetic distance])
@@ -28,68 +25,72 @@ pub struct SpeciesID(usize, usize);
 ///
 /// [genetic distance]: crate::populations::PopConfig::distance_threshold
 /// [`stagnation_threshold`]: crate::populations::PopConfig::survival_threshold
-#[derive(Debug)]
-pub struct Species<'a> {
+#[derive(Debug, Clone)]
+pub struct Species {
     id: SpeciesID,
-    genomes: Vec<&'a Genome>,
+    pub(super) genomes: Vec<Genome>,
     representative: Genome,
     stagnation: usize,
     shared_fitness: f32,
 }
 
-impl<'a> Species<'a> {
+impl Species {
     /// Creates a new species with the specified ID and
     /// representative.
-    pub fn new(id: SpeciesID, representative: &Genome) -> Species<'a> {
-        todo!()
+    pub fn new(id: SpeciesID, representative: Genome) -> Species {
+        Species {
+            id,
+            genomes: vec![representative.clone()],
+            representative,
+            stagnation: 0,
+            shared_fitness: 0.0,
+        }
     }
 
     /// Returns the species' ID.
     pub fn id(&self) -> SpeciesID {
-        todo!()
+        self.id
     }
 
     /// Returns the species' representative.
     pub fn representative(&self) -> &Genome {
-        todo!()
+        &self.representative
+    }
+
+    pub fn genetic_distance(&self, other: &Genome, config: &GeneticConfig) -> f32 {
+        self.representative.genetic_distance_to(other, config)
     }
 
     /// Adds a genome to the species.
-    pub fn add_genome(&mut self, genome: &'a Genome) {
-        todo!()
-    }
-
-    /// Generates the species' assigned offspring,
-    /// keeping the [species' elite] and mating the
-    /// [top performers].
-    ///
-    /// [species' elite]: crate::populations::PopConfig::elitism;
-    /// [top performers]: crate::populations::PopConfig::survival_threshold;
-    pub fn generate_offspring(&self, assigned_offspring: usize, pop: Population) -> Vec<Genome> {
-        todo!()
+    pub fn add_genome(&mut self, genome: Genome) {
+        self.genomes.push(genome);
     }
 
     /// Returns the species' _member-count adjusted_
     /// fitness. I.e., the average of the species'
     /// genome's fitnesses.
     pub fn adjusted_fitness(&self) -> f32 {
-        todo!()
+        self.genomes.iter().map(|g| g.fitness).sum::<f32>() / self.genomes.len() as f32
     }
 
     /// Returns the number of generations the species
     /// has been stagnated.
     pub fn time_stagnated(&self) -> usize {
-        todo!()
-    }
-
-    /// Returns a random sample of the species' members.
-    pub fn random_sample(&self, n: usize) -> Vec<&'a Genome> {
-        todo!()
+        self.stagnation
     }
 
     /// Returns the species' members.
-    pub fn genomes(&self) -> Vec<&'a Genome> {
-        todo!()
+    pub fn genomes(&self) -> &[Genome] {
+        &self.genomes
+    }
+
+    /// Returns the currently best-performing genome.
+    pub fn champion(&self) -> &Genome {
+        &self
+            .genomes
+            .iter()
+            .max_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap())
+            .expect("empty population has no champion")
     }
 }
 

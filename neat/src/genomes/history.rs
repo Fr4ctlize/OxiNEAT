@@ -121,6 +121,16 @@ impl History {
         self.gene_innovations.clear();
         self.node_innovations.clear();
     }
+
+    /// Returns the highest gene innovation number generated.
+    pub fn gene_innovation_count(&self) -> Innovation {
+        self.next_gene_innovation - 1
+    }
+
+    /// Returns the hightest node innovation number generated.
+    pub fn node_innovation_count(&self) -> Innovation {
+        self.next_node_innovation - 1
+    }
 }
 
 #[cfg(test)]

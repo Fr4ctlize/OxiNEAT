@@ -1,9 +1,9 @@
 /// Configuration data for population generation
 /// and evolution.
 #[derive(Clone, Debug)]
-pub struct PopConfig {
+pub struct PopulationConfig {
     /// Size of the population.
-    pub population_size: usize,
+    pub population_size: std::num::NonZeroUsize,
     /// Genetic distance threshold, beyond which
     /// genomes are considered as belonging to
     /// different species.
@@ -23,8 +23,12 @@ pub struct PopConfig {
     pub interspecies_mating_chance: f32,
     /// Number of generations without a fitness increase
     /// before a species is considered _stagnated_.
-    pub stagnation_threshold: usize,
-    /// Desired amount of species in the population.
-    /// If zero, no species control will take effect.
-    pub target_species: usize,
+    pub stagnation_threshold: std::num::NonZeroUsize,
+    /// Offspring allotment penalty for stagnation.
+    /// Stagnated species will receive this percentage
+    /// fewer offspring.
+    pub stagnation_penalty: f32,
+    // /// Desired amount of species in the population.
+    // /// If zero, no species control will take effect.
+    // pub target_species: usize,
 }

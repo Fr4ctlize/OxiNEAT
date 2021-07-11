@@ -1,12 +1,14 @@
 use crate::genomes::GeneticConfig;
 use crate::Innovation;
 
+use std::fmt;
+
 use rand::{thread_rng, Rng};
 
 /// Genes are the principal components of genomes.
 /// They are created between two nodes, and become
 /// network connections in the genome's phenotype.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Gene {
     id: Innovation,
     input: Innovation,
@@ -51,10 +53,7 @@ impl Gene {
     /// [`weight_bound`]: crate::genomes::GeneticConfig::weight_bound
     pub fn nudge_weight(&mut self, config: &GeneticConfig) {
         self.weight += Self::random_weight(config);
-        self.weight = self
-            .weight
-            .max(-config.weight_mutation_power)
-            .min(config.weight_mutation_power);
+        self.weight = self.weight.clamp(-config.weight_bound, config.weight_bound);
     }
 
     /// Returns the gene's innovation number.
@@ -70,6 +69,21 @@ impl Gene {
     /// Returns the gene's output node's innovation number.
     pub fn output(&self) -> Innovation {
         self.output
+    }
+}
+
+impl fmt::Debug for Gene {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{:?}[{:?}->{:?}, {:.3}]{}",
+            if self.suppressed { "(" } else { "" },
+            self.id,
+            self.input,
+            self.output,
+            self.weight,
+            if self.suppressed { ")" } else { "" },
+        )
     }
 }
 

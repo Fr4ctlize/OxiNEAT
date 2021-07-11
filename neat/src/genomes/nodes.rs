@@ -1,6 +1,7 @@
 use crate::Innovation;
 
 use std::collections::HashSet;
+use std::fmt;
 
 /// An ActivationType represents the type
 /// of activation function the node's network
@@ -28,7 +29,7 @@ pub enum NodeType {
 
 /// Nodes are the structural elements of genomes
 /// between which genes are created.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Node {
     id: Innovation,
     inputs: HashSet<Innovation>,
@@ -102,6 +103,16 @@ impl Node {
     /// Returns the node's activation type.
     pub fn activation_type(&self) -> ActivationType {
         self.activation_type
+    }
+}
+
+impl fmt::Debug for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:?}[{:?}, {:?}, IN: {:?}, OUT: {:?}]",
+            self.id, self.node_type, self.activation_type, self.inputs, self.outputs,
+        )
     }
 }
 

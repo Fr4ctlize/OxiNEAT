@@ -11,8 +11,9 @@ pub use nodes::{ActivationType, Node, NodeType};
 use crate::Innovation;
 
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
-use std::collections::hash_map::{HashMap};
+use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 
 /// Genomes are the focus of evolution in NEAT.
 /// They are a collection of genes and nodes that can be instantiated
@@ -20,7 +21,7 @@ use std::collections::HashSet;
 /// for performance in a task, which results numerically in
 /// their fitness score. Genomes can be progressively mutated,
 /// thus adding complexity and functionality.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Genome {
     genes: HashMap<Innovation, Gene>,
     nodes: HashMap<Innovation, Node>,
@@ -450,8 +451,13 @@ impl Genome {
     /// Performs all mutations on self.
     fn mutate_all(&mut self, history: &mut History, config: &GeneticConfig) -> Result<(), String> {
         self.mutate_weights(config);
-        self.mutate_nodes(history, config)?;
-        self.mutate_genes(history, config)?;
+        let mut rng = rand::thread_rng();
+        if rng.gen::<f32>() < config.node_mutation_chance {
+            let _ = self.mutate_nodes(history, config);
+        }
+        if rng.gen::<f32>() < config.gene_mutation_chance {
+            let _ = self.mutate_genes(history, config);
+        }
         Ok(())
     }
 
@@ -556,7 +562,7 @@ impl Genome {
 
         config.disjoint_gene_factor * (disjoint_gene_count1 + disjoint_gene_count2) as f32
             + config.excess_gene_factor * excess_gene_count as f32
-            + config.common_weight_factor * common_weight_diff
+            + config.common_weight_factor * common_weight_diff / common_ids.len() as f32
     }
 
     /// Returns a reference to the genome's gene map.
@@ -567,6 +573,20 @@ impl Genome {
     /// Returns a reference to the genome's node map.
     pub fn nodes(&self) -> &HashMap<Innovation, Node> {
         &self.nodes
+    }
+}
+
+impl fmt::Debug for Genome {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut genes: Vec<&Gene> = self.genes.values().collect();
+        let mut nodes: Vec<&Node> = self.nodes.values().collect();
+        genes.sort_unstable_by_key(|g| g.innovation());
+        nodes.sort_unstable_by_key(|n| n.innovation());
+        f.debug_struct("Genome")
+            .field("Genes", &genes)
+            .field("Nodes", &nodes)
+            .field("Fitness", &self.fitness)
+            .finish()
     }
 }
 

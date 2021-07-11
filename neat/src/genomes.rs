@@ -107,7 +107,7 @@ impl Genome {
         weight: f32,
     ) -> Result<&mut Gene, String> {
         match self.check_gene_viability(gene_id, input_id, output_id) {
-            Ok(_) => unsafe { self.add_gene_unchecked(gene_id, input_id, output_id, weight) },
+            Ok(_) => unsafe { Ok(self.add_gene_unchecked(gene_id, input_id, output_id, weight)) },
             Err(e) => Err(e),
         }
     }
@@ -122,21 +122,21 @@ impl Genome {
         input_id: Innovation,
         output_id: Innovation,
         weight: f32,
-    ) -> Result<&mut Gene, String> {
+    ) -> &mut Gene {
         self.nodes
             .get_mut(&input_id)
             .unwrap()
-            .add_output_gene(gene_id)?;
+            .add_output_gene(gene_id).unwrap();
         self.nodes
             .get_mut(&output_id)
             .unwrap()
-            .add_input_gene(gene_id)?;
+            .add_input_gene(gene_id).unwrap();
         self.max_innovation = self.max_innovation.max(gene_id);
         self.node_pairings.insert((input_id, output_id));
-        Ok(self
+        self
             .genes
             .entry(gene_id)
-            .or_insert_with(|| Gene::new(gene_id, input_id, output_id, weight)))
+            .or_insert_with(|| Gene::new(gene_id, input_id, output_id, weight))
     }
 
     /// Checks whether a gene is a duplicate or
@@ -392,13 +392,13 @@ impl Genome {
                 input_node,
                 new_node,
                 Gene::random_weight(config),
-            )?;
+            );
             self.add_gene_unchecked(
                 output_gene,
                 new_node,
                 output_node,
                 Gene::random_weight(config),
-            )?;
+            );
         }
 
         Ok((
@@ -463,11 +463,13 @@ impl Genome {
 
     /// Adds all uncommon structure and combines genes to `self`.
     fn combine(&mut self, other: &Genome, config: &GeneticConfig) -> Result<(), String> {
-        self.add_noncommon_structure(other)?;
+        if self.fitness == other.fitness {
+            self.add_noncommon_structure(other)?;
+        }
         if rand::thread_rng().gen::<f32>() < config.mate_by_averaging_chance {
-            self.combines_genes_average(other);
+            self.average_common_genes(other);
         } else {
-            self.combines_genes_random_choice(other);
+            self.randomly_choose_common_genes(other);
         }
         Ok(())
     }
@@ -491,17 +493,17 @@ impl Genome {
 
     /// Combines all common genes by averaging weights, and suppresses
     /// genes that are suppresssed in either genome.
-    fn combines_genes_average(&mut self, other: &Genome) {
-        for (id, gene) in &other.genes {
-            if let Some(own) = self.genes.get_mut(&id) {
-                own.weight = (own.weight + gene.weight) / 2.0;
+    fn average_common_genes(&mut self, other: &Genome) {
+        for (id, others_gene) in &other.genes {
+            if let Some(own_gene) = self.genes.get_mut(&id) {
+                own_gene.weight = (own_gene.weight + others_gene.weight) / 2.0;
             }
         }
     }
 
     /// Combines all common genes by chosing weights randomly between genomes, and suppresses
     /// genes that are suppresssed in either genome.
-    fn combines_genes_random_choice(&mut self, other: &Genome) {
+    fn randomly_choose_common_genes(&mut self, other: &Genome) {
         let mut rng = rand::thread_rng();
         for (id, gene) in &other.genes {
             if let Some(own) = self.genes.get_mut(&id) {
@@ -1049,7 +1051,7 @@ mod tests {
         genome1.add_gene(3, 1, 2, 4.0)?;
         genome2.add_gene(3, 1, 2, 4.0)?;
 
-        genome1.combines_genes_average(&genome2);
+        genome1.average_common_genes(&genome2);
 
         assert_eq!(genome1.genes.get(&0).unwrap().weight, 2.0);
         assert_eq!(genome1.genes.get(&1).unwrap().weight, 0.0);
@@ -1080,7 +1082,7 @@ mod tests {
         genome1.add_gene(3, 1, 2, 4.0)?;
         genome2.add_gene(3, 1, 2, 4.0)?;
 
-        genome1.combines_genes_random_choice(&genome2);
+        genome1.randomly_choose_common_genes(&genome2);
 
         assert!([1.0, 3.0].contains(&genome1.genes.get(&0).unwrap().weight));
         assert!([2.0, -2.0].contains(&genome1.genes.get(&1).unwrap().weight));

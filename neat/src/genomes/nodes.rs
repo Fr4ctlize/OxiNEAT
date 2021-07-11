@@ -57,7 +57,6 @@ impl Node {
             self.inputs.insert(input_id);
             Ok(())
         } else {
-            dbg!(&self);
             Err(format!(
                 "attempted to add duplicate input with ID {}",
                 input_id
@@ -72,7 +71,6 @@ impl Node {
             self.outputs.insert(output_id);
             Ok(())
         } else {
-            dbg!(&self);
             Err(format!(
                 "attempted to add duplicate output with ID {}",
                 output_id

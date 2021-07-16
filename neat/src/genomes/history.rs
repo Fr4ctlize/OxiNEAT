@@ -54,12 +54,17 @@ impl History {
     pub fn next_node_innovation(
         &self,
         split_gene: Innovation,
+        duplicate: bool,
     ) -> (Innovation, Innovation, Innovation) {
-        *self.node_innovations.get(&split_gene).unwrap_or(&(
-            self.next_gene_innovation,
-            self.next_node_innovation,
-            self.next_gene_innovation + 1,
-        ))
+        if !self.node_innovations.contains_key(&split_gene) || duplicate {
+            (
+                self.next_gene_innovation,
+                self.next_node_innovation,
+                self.next_gene_innovation + 1,
+            )
+        } else {
+            self.node_innovations[&split_gene]
+        }
     }
 
     /// Adds a gene mutation to the history and returns
@@ -111,7 +116,7 @@ impl History {
             self.next_node_innovation += 1;
             innovation_record
         } else {
-            *self.node_innovations.get(&split_gene).unwrap()
+            self.node_innovations[&split_gene]
         }
     }
 

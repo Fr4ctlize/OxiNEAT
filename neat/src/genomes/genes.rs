@@ -70,6 +70,11 @@ impl Gene {
     pub fn output(&self) -> Innovation {
         self.output
     }
+
+    /// Returns the gene's innput and output's innovation numbers.
+    pub(super) fn endpoints(&self) -> (Innovation, Innovation) {
+        (self.input, self.output)
+    }
 }
 
 impl fmt::Debug for Gene {

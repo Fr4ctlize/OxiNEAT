@@ -1,3 +1,4 @@
+use super::PopulationConfig;
 use crate::genomes::{GeneticConfig, Genome};
 
 /// Species identifier. Specifies
@@ -31,7 +32,7 @@ pub struct Species {
     pub(super) genomes: Vec<Genome>,
     representative: Genome,
     stagnation: usize,
-    shared_fitness: f32,
+    max_fitness: f32,
 }
 
 impl Species {
@@ -43,7 +44,7 @@ impl Species {
             genomes: vec![representative.clone()],
             representative,
             stagnation: 0,
-            shared_fitness: 0.0,
+            max_fitness: 0.0,
         }
     }
 
@@ -64,6 +65,21 @@ impl Species {
     /// Adds a genome to the species.
     pub fn add_genome(&mut self, genome: Genome) {
         self.genomes.push(genome);
+    }
+
+    /// Updates the species' record of maximum
+    /// fitness, to keep track of stagnation.
+    pub fn update_fitness(&mut self) {
+        let max_fitness = self
+            .genomes
+            .iter()
+            .map(|g| g.fitness)
+            .max_by(|a, b| a.partial_cmp(&b).unwrap())
+            .unwrap_or(0.0);
+        if max_fitness <= self.max_fitness {
+            self.stagnation += 1;
+        }
+        self.max_fitness = max_fitness;
     }
 
     /// Returns the species' _member-count adjusted_
@@ -90,7 +106,15 @@ impl Species {
             .genomes
             .iter()
             .max_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap())
-            .expect("empty population has no champion")
+            .expect("empty species has no champion")
+    }
+
+    pub(super) fn count_elite(&self, config: &PopulationConfig) -> usize {
+        (self.genomes.len() as f32 * config.elitism).ceil() as usize
+    }
+
+    pub(super) fn count_survivors(&self, config: &PopulationConfig) -> usize {
+        (self.genomes.len() as f32 * config.survival_threshold).ceil() as usize
     }
 }
 

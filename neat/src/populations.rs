@@ -1,12 +1,14 @@
 mod config;
 mod log;
+mod offspring;
 mod species;
 
 pub use config::PopulationConfig;
-pub use log::{EvolutionLogger, ReportingLevel};
+pub use log::*;
 pub use species::{Species, SpeciesID};
 
 use crate::genomes::{GeneticConfig, Genome, History};
+use offspring::OffspringFactory;
 
 use std::collections::HashMap;
 
@@ -43,7 +45,7 @@ impl Population {
             },
             history: History::new(&genetic_config),
             generation: 0,
-            historical_species_count: 0,
+            historical_species_count: 1,
             population_config,
             genetic_config,
         }
@@ -74,8 +76,11 @@ impl Population {
     pub fn evolve(&mut self) {
         match self.allot_offspring() {
             Ok(allotted_offspring) => {
+                self.species.iter_mut().for_each(Species::update_fitness);
                 self.generate_offspring(&allotted_offspring);
                 self.respeciate_all();
+                self.remove_extinct_species();
+                self.generation += 1;
             }
             Err(_) => self.reset(),
         }
@@ -89,8 +94,28 @@ impl Population {
     ///
     /// Returns an error if all genome's fitnesses are 0.
     fn allot_offspring(&self) -> Result<Vec<usize>, ()> {
-        let fitnesses: Vec<f32> = self
-            .species
+        match self.get_species_adjusted_fitness() {
+            Some(adjusted_fitnesses) => Ok(round_retain_sum(&adjusted_fitnesses)),
+            None => Err(()),
+        }
+    }
+
+    fn get_species_adjusted_fitness(&self) -> Option<Vec<f32>> {
+        let fitnesses = self.species_fitness_with_stagnation_penalty();
+        let fitness_sum: f32 = fitnesses.iter().copied().sum();
+        if fitness_sum == 0.0 {
+            return None;
+        }
+        Some(
+            fitnesses
+                .iter()
+                .map(|f| *f / fitness_sum * self.population_config.population_size.get() as f32)
+                .collect(),
+        )
+    }
+
+    fn species_fitness_with_stagnation_penalty(&self) -> Vec<f32> {
+        self.species
             .iter()
             .map(|s| {
                 if s.time_stagnated() >= self.population_config.stagnation_threshold.get() {
@@ -99,23 +124,14 @@ impl Population {
                     s.adjusted_fitness()
                 }
             })
-            .collect();
-        let fitness_sum: f32 = fitnesses.iter().copied().sum();
-        if fitness_sum == 0.0 {
-            return Err(());
-        }
-        let fractional_allotments: Vec<f32> = fitnesses
-            .iter()
-            .map(|f| *f / fitness_sum * self.population_config.population_size.get() as f32)
-            .collect();
-        Ok(round_retain_sum(&fractional_allotments))
+            .collect()
     }
 
     /// Generates each species' assigned offspring,
     /// keeping the [species' elite] and mating the
     /// [top performers].
     ///
-    /// Has a [small chance] of selecting a partner
+    /// Has a [chance] of selecting a partner
     /// from another species.
     ///
     /// Offspring are assigned randomly to the species
@@ -123,73 +139,28 @@ impl Population {
     ///
     /// [species' elite]: crate::populations::PopConfig::elitism
     /// [top performers]: crate::populations::PopConfig::survival_threshold
-    /// [small chance]: crate::populations::PopConfig::interspecies_mating_chance
+    /// [chance]: crate::populations::PopConfig::interspecies_mating_chance
     fn generate_offspring(&mut self, allotted_offspring: &[usize]) {
+        self.sort_species_members_by_fitness();
+
+        let mut species_offspring = OffspringFactory::new(
+            &self.species,
+            &mut self.history,
+            &self.genetic_config,
+            &self.population_config,
+        )
+        .generate_offspring(allotted_offspring);
+
+        for species in &mut self.species {
+            species.genomes = species_offspring.remove(&species.id()).unwrap();
+        }
+    }
+
+    fn sort_species_members_by_fitness(&mut self) {
         for species in &mut self.species {
             species
                 .genomes
                 .sort_unstable_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap());
-        }
-
-        let mut species_offspring: HashMap<SpeciesID, Vec<Genome>> =
-            self.species.iter().map(|s| (s.id(), vec![])).collect();
-
-        for (allotted_offspring, current_species) in allotted_offspring.iter().zip(&self.species) {
-            // Number of genomes directly copied to next generation.
-            let elite = ((self.population_config.elitism * current_species.genomes.len() as f32)
-                .ceil() as usize)
-                .max(*allotted_offspring);
-            // Number of genomes eligible for mating.
-            let survivors = (self.population_config.survival_threshold
-                * current_species.genomes.len() as f32)
-                .ceil() as usize;
-            // Number of genomes derived from mating.
-            let offspring = (*allotted_offspring - elite).max(0);
-            // Genomes eligible for mating.
-            let eligible_parents: Vec<&Genome> =
-                current_species.genomes[..survivors].iter().collect();
-
-            // Copy elites.
-            for g in &current_species.genomes[0..elite] {
-                species_offspring
-                    .get_mut(&current_species.id())
-                    .unwrap()
-                    .push(g.clone());
-            }
-            let mut rng = rand::thread_rng();
-            // Mate parents
-            for _ in 0..offspring {
-                let mut parents = eligible_parents.choose_multiple(&mut rng, 2);
-                let (parent1, mut parent2) = (*parents.next().unwrap(), *parents.next().unwrap());
-                let mut parent2_species = current_species.id();
-                // Possibly choose other parent from other species
-                if self.species.len() > 1
-                    && rng.gen::<f32>() < self.population_config.interspecies_mating_chance
-                {
-                    let other_species = self
-                        .species
-                        .iter()
-                        .filter(|s| s.id() != current_species.id())
-                        .choose(&mut rng)
-                        .unwrap();
-                    parent2 = other_species.genomes.choose(&mut rng).unwrap();
-                    parent2_species = other_species.id();
-                }
-                let child_species = if rng.gen::<usize>() % 2 == 0 {
-                    current_species.id()
-                } else {
-                    parent2_species
-                };
-                species_offspring.get_mut(&child_species).unwrap().push(
-                    parent1
-                        .mate_with(parent2, &mut self.history, &self.genetic_config)
-                        .unwrap(),
-                );
-            }
-        }
-
-        for species in &mut self.species {
-            species.genomes = species_offspring.remove(&species.id()).unwrap();
         }
     }
 
@@ -199,13 +170,16 @@ impl Population {
     fn respeciate_all(&mut self) {
         let mut new_species_count = 0;
         // Reassign removed genomes.
-        for genome in self.drain_incompatibles() {
+        for genome in self.drain_incompatible_genomes_from_species() {
             if self.respeciate(
                 genome,
                 SpeciesID(self.historical_species_count, new_species_count),
             ) {
                 new_species_count += 1;
             }
+        }
+        if new_species_count > 0 {
+            self.historical_species_count += 1;
         }
     }
 
@@ -229,7 +203,7 @@ impl Population {
 
     /// Removes and returns all genomes incompatible with their
     /// species, iff they are to be adopted.
-    fn drain_incompatibles(&mut self) -> impl Iterator<Item = Genome> {
+    fn drain_incompatible_genomes_from_species(&mut self) -> impl Iterator<Item = Genome> {
         let mut incompatibles = vec![];
         let mut rng = rand::thread_rng();
         // Remove all genomes that are incompatible with
@@ -249,6 +223,18 @@ impl Population {
             }
         }
         incompatibles.into_iter()
+    }
+
+    fn remove_extinct_species(&mut self) {
+        let mut i = 0;
+        while i < self.species.len() {
+            if self.species[i].genomes.is_empty() {
+                self.species.swap_remove(i);
+            } else {
+                i += 1;
+            }
+        }
+        self.species.sort_unstable_by_key(|s| s.id());
     }
 
     /// Resets the population to an initial randomized state.

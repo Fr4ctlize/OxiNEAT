@@ -328,7 +328,7 @@ impl Genome {
 
     fn find_node_pair(
         &self,
-        potential_inputs: &Vec<Innovation>,
+        potential_inputs: &[Innovation],
         potential_outputs: &HashSet<Innovation>,
         config: &GeneticConfig,
     ) -> Option<(Innovation, Innovation)> {
@@ -336,11 +336,8 @@ impl Genome {
             .iter()
             .take(config.max_gene_mutation_attempts)
             .filter_map(|i| {
-                if let Some(output) = self.choose_output_node_for(i, potential_outputs, config) {
-                    Some((*i, output))
-                } else {
-                    None
-                }
+                self.choose_output_node_for(i, potential_outputs, config)
+                    .map(|output| (*i, output))
             })
             .next()
     }
@@ -393,10 +390,9 @@ impl Genome {
         let candidate_genes: Vec<&Gene> = self.genes.values().filter(|g| !g.suppressed).collect();
 
         let mut rng = rand::thread_rng();
-        match candidate_genes.choose(&mut rng) {
-            Some(gene) => Some(gene.innovation()),
-            None => None,
-        }
+        candidate_genes
+            .choose(&mut rng)
+            .map(|gene| gene.innovation())
     }
 
     fn get_node_mutation_innovation(
@@ -519,7 +515,7 @@ impl Genome {
 
     /// Adds all uncommon structure and combines genes to `self`.
     fn combine(&mut self, other: &Genome, config: &GeneticConfig) -> Result<(), String> {
-        if self.fitness == other.fitness {
+        if (self.fitness - other.fitness).abs() < f32::EPSILON {
             self.add_noncommon_structure(other)?;
         }
         if rand::thread_rng().gen::<f32>() < config.mate_by_averaging_chance {

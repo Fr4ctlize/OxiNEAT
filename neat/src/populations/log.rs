@@ -44,10 +44,11 @@ impl Stats {
             .select_nth_unstable_by(mid, |a, b| a.partial_cmp(&b).unwrap())
             .1;
         if data.len() % 2 == 0 {
-            median = median
+            median = (median
                 + *data
                     .select_nth_unstable_by(mid + 1, |a, b| a.partial_cmp(&b).unwrap())
-                    .1;
+                    .1)
+                / 2.0;
         }
         Stats {
             maximum: max,

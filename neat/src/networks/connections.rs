@@ -3,8 +3,8 @@ use crate::Innovation;
 use super::Node;
 
 use std::cell::RefCell;
-use std::rc::Weak;
 use std::fmt;
+use std::rc::Weak;
 
 /// Network equivalent of genes in genomes.
 #[derive(Clone)]
@@ -18,11 +18,7 @@ impl Connection {
     /// Create a new connection between the specified
     /// input and output nodes.
     pub fn new(id: Innovation, output: Weak<RefCell<Node>>, weight: f32) -> Connection {
-        Connection {
-            id,
-            output,
-            weight,
-        }
+        Connection { id, output, weight }
     }
 
     /// Returns the connections's innovation number.
@@ -43,11 +39,13 @@ impl Connection {
 
 impl fmt::Debug for Connection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Connection")
-         .field("id", &self.id)
-         .field("output", &self.output.upgrade().expect("upgraded Weak pointer to deallocated Node").borrow().id())
-         .field("weight", &self.weight)
-         .finish()
+        write!(
+            f,
+            "{} {:?} {}",
+            self.id,
+            self.output.upgrade().unwrap().borrow().id(),
+            self.weight
+        )
     }
 }
 

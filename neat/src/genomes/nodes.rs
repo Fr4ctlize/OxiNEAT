@@ -52,29 +52,29 @@ impl Node {
 
     /// Adds the passed innovation number to the node's
     /// list of input genes.
-    pub fn add_input_gene(&mut self, input_id: Innovation) -> Result<(), String> {
+    /// 
+    /// # Panics
+    /// This function panics if the gene is already 
+    /// in the node's inputs.
+    pub fn add_input_gene(&mut self, input_id: Innovation) {
         if !self.inputs.contains(&input_id) {
             self.inputs.insert(input_id);
-            Ok(())
         } else {
-            Err(format!(
-                "attempted to add duplicate input with ID {}",
-                input_id
-            ))
+            panic!("attempted to add duplicate input with ID {}", input_id)
         }
     }
 
     /// Adds the passed innovation number to the node's
     /// list of output genes.
-    pub fn add_output_gene(&mut self, output_id: Innovation) -> Result<(), String> {
+    /// 
+    /// # Panics
+    /// This function panics if the gene is already
+    /// in the node's outputs.
+    pub fn add_output_gene(&mut self, output_id: Innovation) {
         if !self.outputs.contains(&output_id) {
             self.outputs.insert(output_id);
-            Ok(())
         } else {
-            Err(format!(
-                "attempted to add duplicate output with ID {}",
-                output_id
-            ))
+            panic!("attempted to add duplicate output with ID {}", output_id)
         }
     }
 

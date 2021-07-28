@@ -84,11 +84,10 @@ impl<'a> OffspringFactory<'a> {
             } else {
                 parent2_species
             };
-            species_offspring.get_mut(&child_species).unwrap().push(
-                parent1
-                    .mate_with(parent2, &mut self.history, &self.genetic_config)
-                    .unwrap(),
-            );
+            species_offspring
+                .get_mut(&child_species)
+                .unwrap()
+                .push(parent1.mate_with(parent2, &mut self.history, &self.genetic_config));
         }
     }
 

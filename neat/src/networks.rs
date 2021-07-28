@@ -7,6 +7,7 @@ use crate::genomes::{Genome, NodeType};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 
 /// A Network is a simple near-isomorphism of a Genome
@@ -14,7 +15,7 @@ use std::rc::Rc;
 /// with suppressed genes being ignored. Genes are
 /// converted into connections, and genome nodes
 /// into network nodes.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Network {
     inputs: Vec<Rc<RefCell<Node>>>,
     hidden: Vec<Rc<RefCell<Node>>>,
@@ -140,6 +141,19 @@ impl Network {
     }
 }
 
+impl fmt::Debug for Network {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let inputs: Vec<_> = self.inputs.iter().map(|n| n.borrow()).collect();
+        let hidden: Vec<_> = self.hidden.iter().map(|n| n.borrow()).collect();
+        let outputs: Vec<_> = self.outputs.iter().map(|n| n.borrow()).collect();
+        f.debug_struct("Network")
+            .field("inputs", &inputs)
+            .field("hidden", &hidden)
+            .field("outputs", &outputs)
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,7 +171,7 @@ mod tests {
         config.output_count = NonZeroUsize::new(2).unwrap();
         config.output_activation_types = vec![ActivationType::Sigmoid, ActivationType::Gaussian];
         let mut genome = Genome::new(&config);
-        genome.add_node(4, ActivationType::Sigmoid).unwrap();
+        genome.add_node(4, ActivationType::Sigmoid);
 
         let ids = [0, 2, 6, 7, 3, 5, 4];
         let inputs = [0, 0, 1, 3, 4, 4, 4];
@@ -165,12 +179,10 @@ mod tests {
         let weights = [1.0, 1.0, 2.5, -2.0, -1.0, -1.5, 3.2];
 
         for i in 0..7 {
-            genome
-                .add_gene(ids[i], inputs[i], outputs[i], weights[i])
-                .unwrap();
+            genome.add_gene(ids[i], inputs[i], outputs[i], weights[i]);
         }
         // Suppressed gene shouldn't be expressed in network.
-        genome.add_gene(1, 0, 3, -1.0).unwrap().suppressed = true;
+        genome.add_gene(1, 0, 3, -1.0).suppressed = true;
 
         let network = Network::from(&genome);
         assert_eq!(network.inputs.len(), 2);
@@ -249,7 +261,7 @@ mod tests {
     #[test]
     fn activate_single() {
         let mut genome = Genome::new(&GeneticConfig::default());
-        genome.add_gene(0, 0, 1, 1.0).unwrap();
+        genome.add_gene(0, 0, 1, 1.0);
         let mut network = Network::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
@@ -263,8 +275,8 @@ mod tests {
     #[test]
     fn activate_single_recursive() {
         let mut genome = Genome::new(&GeneticConfig::default());
-        genome.add_gene(0, 0, 1, 1.0).unwrap();
-        genome.add_gene(1, 1, 1, -1.0).unwrap(); // Recursive connection
+        genome.add_gene(0, 0, 1, 1.0);
+        genome.add_gene(1, 1, 1, -1.0); // Recursive connection
         let mut network = Network::from(&genome);
         let mut prev_output = 0.0;
         for input in -20..=20 {
@@ -279,9 +291,9 @@ mod tests {
     #[test]
     fn activate_double() {
         let mut genome = Genome::new(&GeneticConfig::default());
-        genome.add_node(2, ActivationType::Sigmoid).unwrap();
-        genome.add_gene(0, 0, 2, 1.0).unwrap();
-        genome.add_gene(1, 2, 1, 1.0).unwrap();
+        genome.add_node(2, ActivationType::Sigmoid);
+        genome.add_gene(0, 0, 2, 1.0);
+        genome.add_gene(1, 2, 1, 1.0);
         let mut network = Network::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
@@ -298,9 +310,9 @@ mod tests {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(3).unwrap();
         let mut genome = Genome::new(&config);
-        genome.add_gene(0, 0, 3, -1.0).unwrap();
-        genome.add_gene(1, 1, 3, 1.0).unwrap();
-        genome.add_gene(2, 2, 3, 0.5).unwrap();
+        genome.add_gene(0, 0, 3, -1.0);
+        genome.add_gene(1, 1, 3, 1.0);
+        genome.add_gene(2, 2, 3, 0.5);
         let mut network = Network::from(&genome);
         for ((x, y), z) in (-20..=20).zip(-20..=20).zip(-20..=20) {
             let (x, y, z) = (x as f32 / 10.0, y as f32 / 10.0, z as f32 / 10.0);
@@ -321,9 +333,9 @@ mod tests {
     #[test]
     fn activate_fully() {
         let mut genome = Genome::new(&GeneticConfig::default());
-        genome.add_node(2, ActivationType::Sigmoid).unwrap();
-        genome.add_gene(0, 0, 2, 1.0).unwrap();
-        genome.add_gene(1, 2, 1, 1.0).unwrap();
+        genome.add_node(2, ActivationType::Sigmoid);
+        genome.add_gene(0, 0, 2, 1.0);
+        genome.add_gene(1, 2, 1, 1.0);
         let mut network = Network::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;

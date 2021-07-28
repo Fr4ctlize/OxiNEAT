@@ -1,9 +1,10 @@
 use super::Connection;
 use crate::genomes::ActivationType;
 use crate::Innovation;
+use std::fmt;
 
 /// Network equivalent of nodes in genomes.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Node {
     id: Innovation,
     pub(super) outputs: Vec<Connection>,
@@ -47,7 +48,7 @@ impl Node {
             for connection in &mut self.outputs {
                 connection.propagate_activation(self.activation);
             }
-            if let Some(Connection{weight, ..}) = &self.recursive_connection {
+            if let Some(Connection { weight, .. }) = &self.recursive_connection {
                 self.input_sum += self.activation * weight;
                 self.will_activate = true;
             }
@@ -93,6 +94,24 @@ impl Node {
         self.activation = 0.0;
         self.activated = false;
         self.will_activate = false;
+    }
+}
+
+impl fmt::Debug for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{} f(∑{})={} {:?} ↺{:?} ⇒{:?} ?{}{}",
+            if self.activated { "[" } else { "" },
+            self.id,
+            self.input_sum,
+            self.activation,
+            self.function,
+            &self.recursive_connection,
+            &self.outputs,
+            self.will_activate,
+            if self.activated { "]" } else { "" },
+        )
     }
 }
 

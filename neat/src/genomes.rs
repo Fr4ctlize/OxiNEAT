@@ -90,12 +90,11 @@ impl Genome {
                             Gene::new(id, i, o + input_count, Gene::random_weight(config)),
                         );
                         node_pairings.insert((i, o + input_count));
-                        nodes.get_mut(&i).unwrap().add_output_gene(id).unwrap();
+                        nodes.get_mut(&i).unwrap().add_output_gene(id);
                         nodes
                             .get_mut(&(o + input_count))
                             .unwrap()
-                            .add_input_gene(id)
-                            .unwrap();
+                            .add_input_gene(id);
                     }
                 }
             }
@@ -107,9 +106,9 @@ impl Genome {
     /// Add a new gene to the genome.
     /// Returns a reference to the new gene.
     ///
-    /// # Errors
+    /// # Panics
     ///
-    /// This function will return an error if a gene with the same
+    /// This function will panic if a gene with the same
     /// `gene_id` already existed in the genome, or if either `input_id`
     /// or `output_id` do not correspond to nodes present in the genome.
     pub fn add_gene(
@@ -118,11 +117,10 @@ impl Genome {
         input_id: Innovation,
         output_id: Innovation,
         weight: f32,
-    ) -> Result<&mut Gene, String> {
-        match self.check_gene_viability(gene_id, input_id, output_id) {
-            Ok(_) => unsafe { Ok(self.add_gene_unchecked(gene_id, input_id, output_id, weight)) },
-            Err(e) => Err(e),
-        }
+    ) -> &mut Gene {
+        self.check_gene_viability(gene_id, input_id, output_id)
+            .unwrap();
+        unsafe { self.add_gene_unchecked(gene_id, input_id, output_id, weight) }
     }
 
     /// Add a new gene to the genome.
@@ -139,13 +137,11 @@ impl Genome {
         self.nodes
             .get_mut(&input_id)
             .unwrap()
-            .add_output_gene(gene_id)
-            .unwrap();
+            .add_output_gene(gene_id);
         self.nodes
             .get_mut(&output_id)
             .unwrap()
-            .add_input_gene(gene_id)
-            .unwrap();
+            .add_input_gene(gene_id);
         self.node_pairings.insert((input_id, output_id));
         self.genes
             .entry(gene_id)
@@ -184,19 +180,13 @@ impl Genome {
     /// Add a new node to the genome.
     /// Returns a reference  to the newly created node.
     ///
-    /// # Errors
+    /// # Panics
     ///
-    /// This function returns an error if a node of the
+    /// This function panics if a node of the
     /// same ID already existed in the genome.
-    pub fn add_node(
-        &mut self,
-        node_id: Innovation,
-        activation_type: ActivationType,
-    ) -> Result<&mut Node, String> {
-        match self.check_node_viability(node_id) {
-            Ok(_) => unsafe { Ok(self.add_node_unchecked(node_id, activation_type)) },
-            Err(e) => Err(e),
-        }
+    pub fn add_node(&mut self, node_id: Innovation, activation_type: ActivationType) -> &mut Node {
+        self.check_node_viability(node_id).unwrap();
+        unsafe { self.add_node_unchecked(node_id, activation_type) }
     }
 
     /// Add a new node to the genome.
@@ -355,7 +345,7 @@ impl Genome {
             input_node,
             output_node,
             Gene::random_weight(config),
-        )?;
+        );
         history.add_gene_innovation(input_node, output_node);
         Ok(gene)
     }
@@ -476,7 +466,7 @@ impl Genome {
         other: &Genome,
         history: &mut History,
         config: &GeneticConfig,
-    ) -> Result<Genome, String> {
+    ) -> Genome {
         let (parent1, parent2) = if self.fitness >= other.fitness {
             (self, other)
         } else {
@@ -487,21 +477,21 @@ impl Genome {
 
         let mut rng = rand::thread_rng();
         if rng.gen::<f32>() < config.mate_only_chance {
-            child.combine(parent2, config)?;
+            child.combine(parent2, config);
         } else if rng.gen::<f32>() < config.mutate_only_chance {
-            child.mutate_all(history, config)?;
+            child.mutate_all(history, config);
         } else {
-            child.combine(parent2, config)?;
-            child.mutate_all(history, config)?;
+            child.combine(parent2, config);
+            child.mutate_all(history, config);
         }
 
         child.reset_suppressions(config);
 
-        Ok(child)
+        child
     }
 
     /// Performs all mutations on self.
-    fn mutate_all(&mut self, history: &mut History, config: &GeneticConfig) -> Result<(), String> {
+    fn mutate_all(&mut self, history: &mut History, config: &GeneticConfig) {
         self.mutate_weights(config);
         let mut rng = rand::thread_rng();
         if rng.gen::<f32>() < config.node_mutation_chance {
@@ -510,37 +500,33 @@ impl Genome {
         if rng.gen::<f32>() < config.gene_mutation_chance {
             let _ = self.mutate_genes(history, config);
         }
-        Ok(())
     }
 
     /// Adds all uncommon structure and combines genes to `self`.
-    fn combine(&mut self, other: &Genome, config: &GeneticConfig) -> Result<(), String> {
+    fn combine(&mut self, other: &Genome, config: &GeneticConfig) {
         if (self.fitness - other.fitness).abs() < f32::EPSILON {
-            self.add_noncommon_structure(other)?;
+            self.add_noncommon_structure(other);
         }
         if rand::thread_rng().gen::<f32>() < config.mate_by_averaging_chance {
             self.average_common_genes(other);
         } else {
             self.randomly_choose_common_genes(other);
         }
-        Ok(())
     }
 
     /// Adds all genes and nodes not common to both genomes to `self`.
-    fn add_noncommon_structure(&mut self, other: &Genome) -> Result<(), String> {
+    fn add_noncommon_structure(&mut self, other: &Genome) {
         for (id, node) in &other.nodes {
             if !self.nodes.contains_key(&id) {
-                self.add_node(*id, node.activation_type())?;
+                self.add_node(*id, node.activation_type());
             }
         }
 
         for (id, gene) in &other.genes {
             if !self.node_pairings.contains(&(gene.input(), gene.output())) {
-                self.add_gene(*id, gene.input(), gene.output(), gene.weight)?;
+                self.add_gene(*id, gene.input(), gene.output(), gene.weight);
             }
         }
-
-        Ok(())
     }
 
     /// Combines all common genes by averaging weights, and suppresses
@@ -738,7 +724,7 @@ mod tests {
     }
 
     #[test]
-    fn add_gene() -> Result<(), String> {
+    fn add_gene() {
         const INNOVATION: Innovation = 631;
         const INPUT: Innovation = 0;
         const OUTPUT: Innovation = 1;
@@ -748,7 +734,7 @@ mod tests {
         config.initial_expression_chance = 0.0;
 
         let mut genome = Genome::new(&config);
-        let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT)?;
+        let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
 
         assert_eq!(gene.innovation(), INNOVATION);
         assert_eq!(gene.input(), INPUT);
@@ -759,11 +745,10 @@ mod tests {
 
         assert_eq!(genome.genes().len(), 1);
         assert_eq!(&genome.genes[&INNOVATION], &gene);
-
-        Ok(())
     }
 
     #[test]
+    #[should_panic]
     fn add_gene_duplicate_gene_innovation() {
         const INNOVATION: Innovation = 0;
         const INPUT: Innovation = 0;
@@ -774,13 +759,11 @@ mod tests {
         config.initial_expression_chance = 1.0;
 
         let mut genome = Genome::new(&config);
-        let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
-        if let Ok(_) = gene {
-            panic!("duplicate gene addition should return error");
-        }
+        genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
     }
 
     #[test]
+    #[should_panic]
     fn add_gene_duplicate_io() {
         const INNOVATION: Innovation = 555;
         const WEIGHT: f32 = 3.0;
@@ -804,13 +787,11 @@ mod tests {
             .unwrap()
             .innovation();
 
-        let gene = genome.add_gene(INNOVATION, input, output, WEIGHT);
-        if let Ok(_) = gene {
-            panic!("duplicate gene addition should return error");
-        }
+        genome.add_gene(INNOVATION, input, output, WEIGHT);
     }
 
     #[test]
+    #[should_panic]
     fn add_gene_invalid_input() {
         const INNOVATION: Innovation = 631;
         const INPUT: Innovation = 500;
@@ -821,13 +802,11 @@ mod tests {
         config.initial_expression_chance = 0.0;
 
         let mut genome = Genome::new(&config);
-        let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
-        if let Ok(_) = gene {
-            panic!("invalid input node should return error");
-        }
+        genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
     }
 
     #[test]
+    #[should_panic]
     fn add_gene_invalid_output() {
         const INNOVATION: Innovation = 631;
         const INPUT: Innovation = 0;
@@ -838,14 +817,11 @@ mod tests {
         config.initial_expression_chance = 0.0;
 
         let mut genome = Genome::new(&config);
-        let gene = genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
-        if let Ok(_) = gene {
-            panic!("invalid output node should return error");
-        }
+        genome.add_gene(INNOVATION, INPUT, OUTPUT, WEIGHT);
     }
 
     #[test]
-    fn add_node() -> Result<(), String> {
+    fn add_node() {
         const INPUTS: usize = 1;
         const OUTPUTS: usize = 1;
         const INNOVATION: Innovation = 42;
@@ -857,7 +833,7 @@ mod tests {
         config.output_count = NonZeroUsize::new(OUTPUTS).unwrap();
 
         let mut genome = Genome::new(&config);
-        let node = genome.add_node(INNOVATION, ACTIVATION_TYPE)?;
+        let node = genome.add_node(INNOVATION, ACTIVATION_TYPE);
 
         assert_eq!(node.innovation(), INNOVATION);
         assert_eq!(node.node_type(), NodeType::Neuron);
@@ -869,11 +845,10 @@ mod tests {
 
         assert_eq!(genome.nodes.len(), INPUTS + OUTPUTS + 1);
         assert_eq!(&genome.nodes[&INNOVATION], &node);
-
-        Ok(())
     }
 
     #[test]
+    #[should_panic]
     fn add_node_duplicate() {
         const INNOVATION: Innovation = 0;
         const ACTIVATION_TYPE: ActivationType = ActivationType::Gaussian;
@@ -882,10 +857,7 @@ mod tests {
         config.initial_expression_chance = 0.0;
 
         let mut genome = Genome::new(&config);
-        let node = genome.add_node(INNOVATION, ACTIVATION_TYPE);
-        if let Ok(_) = node {
-            panic!("duplicate node addition should return error");
-        }
+        genome.add_node(INNOVATION, ACTIVATION_TYPE);
     }
 
     /// It is possible this test will fail
@@ -941,7 +913,7 @@ mod tests {
     }
 
     #[test]
-    fn mutate_genes() -> Result<(), String> {
+    fn mutate_genes() {
         let mut config = GeneticConfig::default();
         config.initial_expression_chance = 1.0;
         config.gene_mutation_chance = 1.0;
@@ -952,8 +924,8 @@ mod tests {
         let mut history = History::new(&config);
 
         let mut genome = Genome::new(&config);
-        genome.add_node(2, ActivationType::Sigmoid)?;
-        let gene = genome.mutate_genes(&mut history, &config)?;
+        genome.add_node(2, ActivationType::Sigmoid);
+        let gene = genome.mutate_genes(&mut history, &config).unwrap();
 
         assert_eq!(
             gene.innovation(),
@@ -961,12 +933,10 @@ mod tests {
         );
         assert!((0..=2).contains(&gene.input()));
         assert!((1..=2).contains(&gene.output()));
-
-        Ok(())
     }
 
     #[test]
-    fn mutate_genes_recursive() -> Result<(), String> {
+    fn mutate_genes_recursive() {
         let mut config = GeneticConfig::default();
         config.initial_expression_chance = 1.0;
         config.gene_mutation_chance = 1.0;
@@ -977,18 +947,17 @@ mod tests {
         let mut history = History::new(&config);
 
         let mut genome = Genome::new(&config);
-        genome.add_node(50, ActivationType::Sigmoid)?;
-        genome.add_gene(42, 0, 50, 2.0)?;
-        genome.add_gene(43, 50, 1, 2.0)?;
-        genome.add_gene(44, 1, 50, 2.0)?;
-        let gene = genome.mutate_genes(&mut history, &config)?;
+        genome.add_node(50, ActivationType::Sigmoid);
+        genome.add_gene(42, 0, 50, 2.0);
+        genome.add_gene(43, 50, 1, 2.0);
+        genome.add_gene(44, 1, 50, 2.0);
+        let gene = genome.mutate_genes(&mut history, &config).unwrap();
 
         assert_eq!(gene.input(), gene.output());
-
-        Ok(())
     }
 
     #[test]
+    #[should_panic]
     fn mutate_genes_no_pairs_found() {
         let mut config = GeneticConfig::default();
         config.initial_expression_chance = 1.0;
@@ -1002,17 +971,13 @@ mod tests {
         let mut genome = Genome::new(&config);
         // Add a recursive gene to make sure they aren't
         // chosen even though it is permitted.
-        genome.add_gene(42, 1, 1, 5.0).unwrap();
+        genome.add_gene(42, 1, 1, 5.0);
 
-        let gene = genome.mutate_genes(&mut history, &config);
-
-        if let Ok(_) = gene {
-            panic!("gene mutation with no viable node pairs should return an error");
-        }
+        genome.mutate_genes(&mut history, &config);
     }
 
     #[test]
-    fn mutate_nodes() -> Result<(), String> {
+    fn mutate_nodes() {
         let mut config = GeneticConfig::default();
         config.activation_types = vec![ActivationType::Sigmoid, ActivationType::ReLU];
         config.initial_expression_chance = 1.0;
@@ -1021,7 +986,7 @@ mod tests {
         let mut history = History::new(&config);
 
         let mut genome = Genome::new(&config);
-        let (input, node, output) = genome.mutate_nodes(&mut history, &config)?;
+        let (input, node, output) = genome.mutate_nodes(&mut history, &config).unwrap();
 
         assert_eq!(
             input.innovation(),
@@ -1036,11 +1001,10 @@ mod tests {
         assert_eq!(genome.genes.len(), 3);
         assert_eq!(genome.nodes.len(), 3);
         assert_eq!(genome.genes[&0].suppressed, true);
-
-        Ok(())
     }
 
     #[test]
+    #[should_panic]
     fn mutate_nodes_no_gene_found() {
         let mut config = GeneticConfig::default();
         config.initial_expression_chance = 0.0;
@@ -1049,15 +1013,11 @@ mod tests {
         let mut history = History::new(&config);
 
         let mut genome = Genome::new(&config);
-        let node = genome.mutate_nodes(&mut history, &config);
-
-        if let Ok(_) = node {
-            panic!("node mutation on empty genome should return an error");
-        }
+        genome.mutate_nodes(&mut history, &config).unwrap();
     }
 
     #[test]
-    fn add_noncommon_structure() -> Result<(), String> {
+    fn add_noncommon_structure() {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1065,49 +1025,47 @@ mod tests {
 
         let mut genome1 = Genome::new(&config);
         let mut genome2 = Genome::new(&config);
-        genome1.add_node(3, ActivationType::Sigmoid)?;
-        genome2.add_node(3, ActivationType::Sigmoid)?;
-        genome2.add_node(4, ActivationType::ReLU)?;
-        genome1.add_gene(2, 0, 3, 1.0)?;
-        genome2.add_gene(3, 0, 3, 1.0)?;
-        genome2.add_gene(4, 0, 4, 2.0)?;
-        genome2.add_gene(5, 3, 4, 3.0)?;
-        genome2.add_gene(6, 4, 2, 4.0)?;
-        genome1.add_noncommon_structure(&genome2)?;
+        genome1.add_node(3, ActivationType::Sigmoid);
+        genome2.add_node(3, ActivationType::Sigmoid);
+        genome2.add_node(4, ActivationType::ReLU);
+        genome1.add_gene(2, 0, 3, 1.0);
+        genome2.add_gene(3, 0, 3, 1.0);
+        genome2.add_gene(4, 0, 4, 2.0);
+        genome2.add_gene(5, 3, 4, 3.0);
+        genome2.add_gene(6, 4, 2, 4.0);
+        genome1.add_noncommon_structure(&genome2);
 
         let mut node4 = Node::new(4, NodeType::Neuron, ActivationType::ReLU);
-        node4.add_input_gene(4)?;
-        node4.add_input_gene(5)?;
-        node4.add_output_gene(6)?;
+        node4.add_input_gene(4);
+        node4.add_input_gene(5);
+        node4.add_output_gene(6);
         assert_eq!(&genome1.nodes[&4], &node4);
         assert_eq!(&genome1.genes[&2], &Gene::new(2, 0, 3, 1.0));
         assert_eq!(&genome1.genes[&4], &Gene::new(4, 0, 4, 2.0));
         assert_eq!(&genome1.genes[&5], &Gene::new(5, 3, 4, 3.0));
         assert_eq!(&genome1.genes[&6], &Gene::new(6, 4, 2, 4.0));
-
-        Ok(())
     }
 
     #[test]
-    fn combines_genes_average() -> Result<(), String> {
+    fn combines_genes_average() {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
         config.initial_expression_chance = 0.0;
 
         let mut genome1 = Genome::new(&config);
-        genome1.add_node(3, ActivationType::Sigmoid)?;
+        genome1.add_node(3, ActivationType::Sigmoid);
 
         let mut genome2 = genome1.clone();
 
-        genome1.add_gene(0, 0, 2, 1.0)?;
-        genome2.add_gene(0, 0, 2, 3.0)?;
-        genome1.add_gene(1, 0, 3, 2.0)?;
-        genome2.add_gene(1, 0, 3, -2.0)?;
-        genome1.add_gene(2, 3, 2, 3.0)?;
-        genome2.add_gene(2, 3, 2, 3.5)?;
-        genome1.add_gene(3, 1, 2, 4.0)?;
-        genome2.add_gene(3, 1, 2, 4.0)?;
+        genome1.add_gene(0, 0, 2, 1.0);
+        genome2.add_gene(0, 0, 2, 3.0);
+        genome1.add_gene(1, 0, 3, 2.0);
+        genome2.add_gene(1, 0, 3, -2.0);
+        genome1.add_gene(2, 3, 2, 3.0);
+        genome2.add_gene(2, 3, 2, 3.5);
+        genome1.add_gene(3, 1, 2, 4.0);
+        genome2.add_gene(3, 1, 2, 4.0);
 
         genome1.average_common_genes(&genome2);
 
@@ -1115,30 +1073,28 @@ mod tests {
         assert_eq!(genome1.genes[&1].weight, 0.0);
         assert_eq!(genome1.genes[&2].weight, 3.25);
         assert_eq!(genome1.genes[&3].weight, 4.0);
-
-        Ok(())
     }
 
     #[test]
-    fn combines_genes_random_choice() -> Result<(), String> {
+    fn combines_genes_random_choice() {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
         config.initial_expression_chance = 0.0;
 
         let mut genome1 = Genome::new(&config);
-        genome1.add_node(3, ActivationType::Sigmoid)?;
+        genome1.add_node(3, ActivationType::Sigmoid);
 
         let mut genome2 = genome1.clone();
 
-        genome1.add_gene(0, 0, 2, 1.0)?;
-        genome2.add_gene(0, 0, 2, 3.0)?;
-        genome1.add_gene(1, 0, 3, 2.0)?;
-        genome2.add_gene(1, 0, 3, -2.0)?;
-        genome1.add_gene(2, 3, 2, 3.0)?;
-        genome2.add_gene(2, 3, 2, 3.5)?;
-        genome1.add_gene(3, 1, 2, 4.0)?;
-        genome2.add_gene(3, 1, 2, 4.0)?;
+        genome1.add_gene(0, 0, 2, 1.0);
+        genome2.add_gene(0, 0, 2, 3.0);
+        genome1.add_gene(1, 0, 3, 2.0);
+        genome2.add_gene(1, 0, 3, -2.0);
+        genome1.add_gene(2, 3, 2, 3.0);
+        genome2.add_gene(2, 3, 2, 3.5);
+        genome1.add_gene(3, 1, 2, 4.0);
+        genome2.add_gene(3, 1, 2, 4.0);
 
         genome1.randomly_choose_common_genes(&genome2);
 
@@ -1146,12 +1102,10 @@ mod tests {
         assert!([2.0, -2.0].contains(&genome1.genes[&1].weight));
         assert!([3.0, 3.5].contains(&genome1.genes[&2].weight));
         assert!([4.0].contains(&genome1.genes[&3].weight));
-
-        Ok(())
     }
 
     #[test]
-    fn reset_suppressions() -> Result<(), String> {
+    fn reset_suppressions() {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1159,19 +1113,17 @@ mod tests {
         config.suppression_reset_chance = 1.0;
 
         let mut genome = Genome::new(&config);
-        genome.add_gene(0, 0, 2, 3.0)?.suppressed = true;
-        genome.add_gene(1, 1, 2, 4.0)?.suppressed = true;
-        genome.add_gene(2, 2, 2, 5.0)?.suppressed = true;
+        genome.add_gene(0, 0, 2, 3.0).suppressed = true;
+        genome.add_gene(1, 1, 2, 4.0).suppressed = true;
+        genome.add_gene(2, 2, 2, 5.0).suppressed = true;
 
         genome.reset_suppressions(&config);
 
         assert!(genome.genes().values().all(|g| !g.suppressed));
-
-        Ok(())
     }
 
     #[test]
-    fn genetic_distance_to() -> Result<(), String> {
+    fn genetic_distance_to() {
         const WEIGHT_FACTOR: f32 = 0.8;
         const DISJOINT_FACTOR: f32 = 0.6;
         const EXCESS_FACTOR: f32 = 0.4;
@@ -1186,30 +1138,29 @@ mod tests {
         let mut genome1 = Genome::new(&config);
         let mut genome2 = Genome::new(&config);
 
-        genome1.add_node(3, ActivationType::Sigmoid)?;
-        genome2.add_node(4, ActivationType::Sigmoid)?;
+        genome1.add_node(3, ActivationType::Sigmoid);
+        genome2.add_node(4, ActivationType::Sigmoid);
 
-        genome1.add_gene(1, 0, 2, -2.0)?;
-        genome2.add_gene(1, 0, 2, 2.0)?;
+        genome1.add_gene(1, 0, 2, -2.0);
+        genome2.add_gene(1, 0, 2, 2.0);
 
-        genome1.add_gene(2, 1, 3, 5.0)?;
-        genome2.add_gene(3, 2, 4, 5.0)?;
+        genome1.add_gene(2, 1, 3, 5.0);
+        genome2.add_gene(3, 2, 4, 5.0);
 
-        genome1.add_gene(4, 1, 2, 3.0)?;
-        genome2.add_gene(4, 1, 2, 6.0)?;
+        genome1.add_gene(4, 1, 2, 3.0);
+        genome2.add_gene(4, 1, 2, 6.0);
 
-        genome1.add_gene(5, 2, 2, 5.0)?;
-        genome2.add_gene(6, 4, 4, 1.0)?;
+        genome1.add_gene(5, 2, 2, 5.0);
+        genome2.add_gene(6, 4, 4, 1.0);
 
         assert_eq!(
             genome1.genetic_distance_to(&genome2, &config),
             DISJOINT_FACTOR * 2.0 + EXCESS_FACTOR * 2.0 + WEIGHT_FACTOR * ((4.0 + 3.0) / 2.0)
         );
-        Ok(())
     }
 
     #[test]
-    fn genetic_distance_to_equal() -> Result<(), String> {
+    fn genetic_distance_to_equal() {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1220,14 +1171,12 @@ mod tests {
 
         let mut genome = Genome::new(&config);
 
-        genome.add_node(3, ActivationType::Sigmoid)?;
-        genome.add_node(4, ActivationType::Sigmoid)?;
-        genome.add_gene(3, 2, 4, 5.0)?;
-        genome.add_gene(5, 2, 2, 5.0)?;
-        genome.add_gene(6, 4, 4, 1.0)?;
+        genome.add_node(3, ActivationType::Sigmoid);
+        genome.add_node(4, ActivationType::Sigmoid);
+        genome.add_gene(3, 2, 4, 5.0);
+        genome.add_gene(5, 2, 2, 5.0);
+        genome.add_gene(6, 4, 4, 1.0);
 
         assert_eq!(genome.genetic_distance_to(&genome.clone(), &config), 0.0);
-
-        Ok(())
     }
 }

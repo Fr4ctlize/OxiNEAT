@@ -141,7 +141,7 @@ impl Population {
     /// [top performers]: crate::populations::PopConfig::survival_threshold
     /// [chance]: crate::populations::PopConfig::interspecies_mating_chance
     fn generate_offspring(&mut self, allotted_offspring: &[usize]) {
-        self.sort_species_members_by_fitness();
+        self.sort_species_members_by_decreasing_fitness();
 
         let mut species_offspring = OffspringFactory::new(
             &self.species,
@@ -156,11 +156,11 @@ impl Population {
         }
     }
 
-    fn sort_species_members_by_fitness(&mut self) {
+    fn sort_species_members_by_decreasing_fitness(&mut self) {
         for species in &mut self.species {
             species
                 .genomes
-                .sort_unstable_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap());
+                .sort_unstable_by(|g1, g2| g2.fitness.partial_cmp(&g1.fitness).unwrap());
         }
     }
 

@@ -32,7 +32,7 @@ impl Gene {
     /// Returns a random weight. Uses a uniform distribution
     /// over the range ±config.weight_mutation_power.
     pub(super) fn random_weight(config: &GeneticConfig) -> f32 {
-        thread_rng().gen_range(-config.weight_mutation_power..=config.weight_mutation_power)
+        thread_rng().gen_range(-config.weight_bound..=config.weight_bound)
     }
 
     /// Randomizes the gene's weight. Uses a uniform
@@ -52,7 +52,8 @@ impl Gene {
     /// [`weight_mutation_power`]: crate::genomes::GeneticConfig::weight_mutation_power
     /// [`weight_bound`]: crate::genomes::GeneticConfig::weight_bound
     pub fn nudge_weight(&mut self, config: &GeneticConfig) {
-        self.weight += Self::random_weight(config);
+        self.weight +=
+            thread_rng().gen_range(-config.weight_mutation_power..=config.weight_mutation_power);
         self.weight = self.weight.clamp(-config.weight_bound, config.weight_bound);
     }
 

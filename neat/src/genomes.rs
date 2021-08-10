@@ -119,7 +119,7 @@ impl Genome {
         weight: f32,
     ) -> &mut Gene {
         self.check_gene_viability(gene_id, input_id, output_id)
-            .unwrap();
+            .unwrap_or_else(|_| panic!("{:?}", self));
         unsafe { self.add_gene_unchecked(gene_id, input_id, output_id, weight) }
     }
 
@@ -219,8 +219,17 @@ impl Genome {
     /// Induces a _weight mutation_ in the genome.
     pub fn mutate_weights(&mut self, config: &GeneticConfig) {
         let mut rng = rand::thread_rng();
+        let max_innovation = self
+            .genes
+            .values()
+            .map(Gene::innovation)
+            .max()
+            .unwrap_or_default()
+            .max(1) as f32;
         for gene in self.genes.values_mut() {
-            if rng.gen::<f32>() < config.weight_reset_chance {
+            if rng.gen::<f32>()
+                < config.weight_reset_chance * (gene.innovation() as f32 / max_innovation).powf(2.0)
+            {
                 gene.randomize_weight(config);
             } else if rng.gen::<f32>() < config.weight_nudge_chance {
                 gene.nudge_weight(config);
@@ -303,7 +312,7 @@ impl Genome {
         {
             Some(candidate_input.innovation())
         } else {
-            let mut candidate_outputs = potential_outputs - &self.output_nodes_of(&candidate_input);
+            let mut candidate_outputs = potential_outputs - &self.output_nodes_of(candidate_input);
             candidate_outputs.remove(&candidate_input.innovation());
             candidate_outputs.iter().choose(&mut rng).copied()
         }
@@ -517,7 +526,7 @@ impl Genome {
     /// Adds all genes and nodes not common to both genomes to `self`.
     fn add_noncommon_structure(&mut self, other: &Genome) {
         for (id, node) in &other.nodes {
-            if !self.nodes.contains_key(&id) {
+            if !self.nodes.contains_key(id) {
                 self.add_node(*id, node.activation_type());
             }
         }
@@ -533,7 +542,7 @@ impl Genome {
     /// genes that are suppresssed in either genome.
     fn average_common_genes(&mut self, other: &Genome) {
         for (id, others_gene) in &other.genes {
-            if let Some(own_gene) = self.genes.get_mut(&id) {
+            if let Some(own_gene) = self.genes.get_mut(id) {
                 own_gene.weight = (own_gene.weight + others_gene.weight) / 2.0;
             }
         }
@@ -544,7 +553,7 @@ impl Genome {
     fn randomly_choose_common_genes(&mut self, other: &Genome) {
         let mut rng = rand::thread_rng();
         for (id, gene) in &other.genes {
-            if let Some(own) = self.genes.get_mut(&id) {
+            if let Some(own) = self.genes.get_mut(id) {
                 if rng.gen::<f32>() < 0.5 {
                     own.weight = gene.weight;
                 }
@@ -622,6 +631,11 @@ impl Genome {
     /// Returns a reference to the genome's node map.
     pub fn nodes(&self) -> &HashMap<Innovation, Node> {
         &self.nodes
+    }
+
+    /// Returns a the genome's current fitness.
+    pub fn fitness(&self) -> f32 {
+        self.fitness
     }
 }
 
@@ -869,11 +883,13 @@ mod tests {
         let mut config = GeneticConfig::default();
         config.initial_expression_chance = 1.0;
         config.weight_reset_chance = 1.0;
-        config.weight_mutation_power = 3.0;
+        config.weight_bound = 3.0;
 
         let mut genome = Genome::new(&config);
         let initial_weight = genome.genes[&0].weight;
+        println!("{:?}", genome);
         genome.mutate_weights(&config);
+        println!("{:?}", genome);
         assert_ne!(initial_weight, genome.genes[&0].weight);
     }
 
@@ -973,7 +989,7 @@ mod tests {
         // chosen even though it is permitted.
         genome.add_gene(42, 1, 1, 5.0);
 
-        genome.mutate_genes(&mut history, &config);
+        genome.mutate_genes(&mut history, &config).unwrap();
     }
 
     #[test]

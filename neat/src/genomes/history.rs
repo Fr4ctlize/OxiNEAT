@@ -51,6 +51,17 @@ impl History {
 
     /// Returns the next node and gene innovation numbers,
     /// or the previously assigned numbers to the same node mutation.
+    ///
+    /// If `duplicate` is `true` and the node mutation is
+    /// already registered, the returned innovation numbers
+    /// will be computed as if it were a new mutation. This
+    /// is used in situations in which the mutating genome
+    /// already split the same gene in a previous mutation,
+    /// which would result in duplicate genes and nodes within
+    /// the same genome. This can be detected if the numbers
+    /// returned by this function without setting `duplicate`
+    /// to `true` refer to genes/nodes already present in the
+    /// genome.
     pub fn next_node_innovation(
         &self,
         split_gene: Innovation,

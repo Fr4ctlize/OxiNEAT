@@ -1,6 +1,6 @@
 mod config;
 mod log;
-mod offspring;
+mod offspring_factory;
 mod species;
 
 pub use config::PopulationConfig;
@@ -8,7 +8,7 @@ pub use log::*;
 pub use species::{Species, SpeciesID};
 
 use crate::genomes::{GeneticConfig, Genome, History};
-use offspring::OffspringFactory;
+use offspring_factory::OffspringFactory;
 
 use std::collections::HashMap;
 
@@ -56,9 +56,12 @@ impl Population {
     ///
     /// The return value of the evaluation function
     /// should be positive.
-    pub fn evaluate_fitness(&mut self, evaluator: fn(&Genome) -> f32) {
+    pub fn evaluate_fitness<E>(&mut self, evaluator: E)
+    where
+        E: Fn(&Genome) -> f32,
+    {
         for genome in self.species.iter_mut().flat_map(|s| &mut s.genomes) {
-            genome.fitness = evaluator(&genome);
+            genome.fitness = evaluator(genome);
         }
     }
 
@@ -71,9 +74,14 @@ impl Population {
     /// species without speciation, which seems to help NEAT
     /// find solutions faster. (See [[Nodine, T., 2010]].)
     ///
+    /// # Errors
+    /// Returns an error if the population has become degenerate
+    /// (zero maximum fitness or all genomes are culled due to
+    /// stagnation).
+    /// 
     /// [adoption rate]: crate::populations::PopConfig::adoption_rate
     /// [Nodine, T., 2010]: https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.175.2884&rep=rep1&type=pdf
-    pub fn evolve(&mut self) {
+    pub fn evolve(&mut self) -> Result<(), ()> {
         match self.allot_offspring() {
             Ok(allotted_offspring) => {
                 self.species.iter_mut().for_each(Species::update_fitness);
@@ -81,8 +89,10 @@ impl Population {
                 self.respeciate_all();
                 self.remove_extinct_species();
                 self.generation += 1;
+                self.history.clear();
+                Ok(())
             }
-            Err(_) => self.reset(),
+            Err(_) => Err(()),
         }
     }
 
@@ -240,14 +250,13 @@ impl Population {
     /// Resets the population to an initial randomized state.
     /// Used primarily in case of population degeneration, e.g.
     /// when all genomes have a fitness score of 0.
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         *self = Population::new(self.population_config.clone(), self.genetic_config.clone());
     }
 
     /// Returns the currently best-performing genome.
     pub fn champion(&self) -> &Genome {
-        &self
-            .species
+        self.species
             .iter()
             .flat_map(|s| &s.genomes)
             .max_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap())

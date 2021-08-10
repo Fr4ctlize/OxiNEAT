@@ -1,5 +1,9 @@
 use super::*;
 
+/// Auxiliary type for offspring generation.
+/// Handles all the tasks of generating a population's
+/// offspring according to the specified configs
+/// and allotted offspring.
 pub(super) struct OffspringFactory<'a> {
     species: &'a [Species],
     history: &'a mut History,
@@ -26,7 +30,7 @@ impl<'a> OffspringFactory<'a> {
         &mut self,
         allotted_offspring: &[usize],
     ) -> HashMap<SpeciesID, Vec<Genome>> {
-        let mut species_offspring = self
+        let mut offspring_of_species = self
             .species
             .iter()
             .enumerate()
@@ -36,17 +40,19 @@ impl<'a> OffspringFactory<'a> {
         for (species_index, allotted_offspring) in allotted_offspring.iter().enumerate() {
             let current_species = &self.species[species_index];
             let elite = current_species
-                .count_elite(&self.population_config)
+                .count_elite(self.population_config)
                 .min(*allotted_offspring);
             let offspring = (*allotted_offspring - elite).max(0);
 
-            self.add_species_elite(&mut species_offspring, species_index, elite);
-            self.add_mated_offspring(offspring, &mut species_offspring, species_index);
+            self.add_species_elite(&mut offspring_of_species, species_index, elite);
+            self.add_mated_offspring(offspring, &mut offspring_of_species, species_index);
         }
 
-        species_offspring
+        offspring_of_species
     }
 
+    /// Add the top "elite" members of the species
+    /// to the offspring.
     fn add_species_elite(
         &mut self,
         offpring_map: &mut HashMap<SpeciesID, Vec<Genome>>,
@@ -60,6 +66,9 @@ impl<'a> OffspringFactory<'a> {
             .extend_from_slice(&species.genomes[0..elite])
     }
 
+    /// Choose parents from the species or from
+    /// other species and mate them, adding the child
+    /// to the species' offspring.
     fn add_mated_offspring(
         &mut self,
         offspring: usize,
@@ -71,14 +80,14 @@ impl<'a> OffspringFactory<'a> {
         // see that we aren't touching it when we modify
         // self.history.
         let species = &self.species[species_index];
-        let survivors = species.count_survivors(&self.population_config);
+        let survivors = species.count_survivors(self.population_config);
         let eligible_parents: Vec<&Genome> = species.genomes[..survivors].iter().collect();
         let mut rng = rand::thread_rng();
         // Mate parents
         for _ in 0..offspring {
             let parent1 = eligible_parents.choose(&mut rng).unwrap();
             let (parent2_species, parent2) =
-                Self::choose_second_parent(species, &self.species, &self.population_config);
+                Self::choose_second_parent(species, self.species, self.population_config);
             let child_species = if rng.gen::<usize>() % 2 == 0 {
                 species.id()
             } else {
@@ -87,10 +96,12 @@ impl<'a> OffspringFactory<'a> {
             species_offspring
                 .get_mut(&child_species)
                 .unwrap()
-                .push(parent1.mate_with(parent2, &mut self.history, &self.genetic_config));
+                .push(parent1.mate_with(parent2, &mut self.history, self.genetic_config));
         }
     }
 
+    /// Choose a parent from the currents species,
+    /// or from another randomly selected.
     fn choose_second_parent(
         current_species: &'a Species,
         all_species: &'a [Species],

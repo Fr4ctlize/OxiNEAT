@@ -74,7 +74,7 @@ impl Species {
             .genomes
             .iter()
             .map(|g| g.fitness)
-            .max_by(|a, b| a.partial_cmp(&b).unwrap())
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
             .unwrap_or(0.0);
         if max_fitness <= self.max_fitness {
             self.stagnation += 1;
@@ -102,7 +102,7 @@ impl Species {
 
     /// Returns the currently best-performing genome.
     pub fn champion(&self) -> &Genome {
-        &self
+        self
             .genomes
             .iter()
             .max_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap())
@@ -110,7 +110,7 @@ impl Species {
     }
 
     pub(super) fn count_elite(&self, config: &PopulationConfig) -> usize {
-        (self.genomes.len() as f32 * config.elitism).ceil() as usize
+        self.genomes.len().min(config.elitism)
     }
 
     pub(super) fn count_survivors(&self, config: &PopulationConfig) -> usize {

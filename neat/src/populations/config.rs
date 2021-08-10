@@ -8,9 +8,9 @@ pub struct PopulationConfig {
     /// genomes are considered as belonging to
     /// different species.
     pub distance_threshold: f32,
-    /// Top % of each species which is copied
+    /// Top n of each species which is copied
     /// as-is to the next generation.
-    pub elitism: f32,
+    pub elitism: usize,
     /// Top % of each species which can participate
     /// in mating.
     pub survival_threshold: f32,

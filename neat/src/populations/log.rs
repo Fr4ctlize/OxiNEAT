@@ -2,6 +2,8 @@ use super::{Population, SpeciesID};
 use crate::genomes::Genome;
 use crate::Innovation;
 
+use std::fmt;
+
 #[derive(Clone, Copy, Debug)]
 pub enum ReportingLevel {
     AllGenomes,
@@ -12,13 +14,38 @@ pub enum ReportingLevel {
 
 #[derive(Clone, Debug)]
 pub struct Log {
-    pub generation: Generation,
+    pub generation_number: usize,
+    pub generation_sample: Generation,
     pub species_count: usize,
     pub fitness: Stats,
     pub gene_count: Stats,
     pub node_count: Stats,
     pub max_gene_innovation: Innovation,
     pub max_node_innovation: Innovation,
+}
+
+impl fmt::Display for Log {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Log {{\n\
+            \tgeneration_number: {:?}\n\
+            \tspecies_count: {:?}\n\
+            \tfitness: {:?}\n\
+            \tgene_count: {:?}\n\
+            \tnode_count: {:?}\n\
+            \tmax_gene_innovation: {:?}\n\
+            \tmax_node_innovation: {:?}\n\
+            }}",
+            &self.generation_number,
+            &self.species_count,
+            &self.fitness,
+            &self.gene_count,
+            &self.node_count,
+            &self.max_gene_innovation,
+            &self.max_node_innovation
+        )
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -30,7 +57,7 @@ pub struct Stats {
 }
 
 impl Stats {
-    fn from(data: &mut dyn Iterator<Item = f32>) -> Stats {
+    pub fn from(data: &mut dyn Iterator<Item = f32>) -> Stats {
         let mut data: Vec<f32> = data.collect();
         let mid = data.len() / 2;
         let (mut max, mut min, mut sum) = (f32::MIN, f32::MAX, 0.0);
@@ -41,12 +68,12 @@ impl Stats {
         }
         let mean = sum / data.len() as f32;
         let mut median = *data
-            .select_nth_unstable_by(mid, |a, b| a.partial_cmp(&b).unwrap())
+            .select_nth_unstable_by(mid, |a, b| a.partial_cmp(b).unwrap())
             .1;
         if data.len() % 2 == 0 {
             median = (median
                 + *data
-                    .select_nth_unstable_by(mid + 1, |a, b| a.partial_cmp(&b).unwrap())
+                    .select_nth_unstable_by(mid + 1, |a, b| a.partial_cmp(b).unwrap())
                     .1)
                 / 2.0;
         }
@@ -89,7 +116,8 @@ impl EvolutionLogger {
             .map(|g| (g.genes().len() as f32, g.nodes().len() as f32, g.fitness))
             .collect();
         self.logs.push(Log {
-            generation: match self.reporting_level {
+            generation_number: population.generation(),
+            generation_sample: match self.reporting_level {
                 ReportingLevel::AllGenomes => Generation::Species(
                     population
                         .species()

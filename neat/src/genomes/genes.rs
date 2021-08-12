@@ -8,7 +8,7 @@ use rand::{thread_rng, Rng};
 /// Genes are the principal components of genomes.
 /// They are created between two nodes, and become
 /// network connections in the genome's phenotype.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Gene {
     id: Innovation,
     input: Innovation,
@@ -78,7 +78,7 @@ impl Gene {
     }
 }
 
-impl fmt::Debug for Gene {
+impl fmt::Display for Gene {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

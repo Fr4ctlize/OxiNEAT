@@ -1,9 +1,11 @@
 mod config;
+mod errors;
 mod genes;
 mod history;
 mod nodes;
 
 pub use config::GeneticConfig;
+use errors::*;
 pub use genes::Gene;
 pub use history::History;
 pub use nodes::{ActivationType, Node, NodeType};
@@ -21,7 +23,7 @@ use std::fmt;
 /// for performance in a task, which results numerically in
 /// their fitness score. Genomes can be progressively mutated,
 /// thus adding complexity and functionality.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Genome {
     genes: HashMap<Innovation, Gene>,
     nodes: HashMap<Innovation, Node>,
@@ -119,7 +121,7 @@ impl Genome {
         weight: f32,
     ) -> &mut Gene {
         self.check_gene_viability(gene_id, input_id, output_id)
-            .unwrap_or_else(|_| panic!("{:?}", self));
+            .unwrap_or_else(|e| panic!("{} in {}", e, self));
         unsafe { self.add_gene_unchecked(gene_id, input_id, output_id, weight) }
     }
 
@@ -159,19 +161,14 @@ impl Genome {
         gene_id: Innovation,
         input_id: Innovation,
         output_id: Innovation,
-    ) -> Result<(), String> {
+    ) -> Result<(), GeneViabilityError> {
+        use GeneViabilityError::*;
         if self.genes.contains_key(&gene_id) {
-            Err(format!("duplicate gene insertion with ID {}", gene_id))
+            Err(DuplicateGeneID(gene_id))
         } else if !(self.nodes.contains_key(&input_id) && self.nodes.contains_key(&output_id)) {
-            Err(format!(
-                "gene insertion with nonexistant endpoint(s) ({}, {})",
-                input_id, output_id
-            ))
+            Err(NonexistantEndpoints(input_id, output_id))
         } else if self.node_pairings.contains(&(input_id, output_id)) {
-            Err(format!(
-                "duplicate gene insertion between nodes {} and {} with alternate ID {}",
-                input_id, output_id, gene_id
-            ))
+            Err(DuplicateGeneWithEndpoints(gene_id, (input_id, output_id)))
         } else {
             Ok(())
         }
@@ -185,7 +182,8 @@ impl Genome {
     /// This function panics if a node of the
     /// same ID already existed in the genome.
     pub fn add_node(&mut self, node_id: Innovation, activation_type: ActivationType) -> &mut Node {
-        self.check_node_viability(node_id).unwrap();
+        self.check_node_viability(node_id)
+            .unwrap_or_else(|e| panic!("{} in {}", e, self));
         unsafe { self.add_node_unchecked(node_id, activation_type) }
     }
 
@@ -208,9 +206,9 @@ impl Genome {
     /// # Errors
     ///
     /// Rertuns an error in case of a duplicate.
-    fn check_node_viability(&self, node_id: Innovation) -> Result<(), String> {
+    fn check_node_viability(&self, node_id: Innovation) -> Result<(), NodeViabilityError> {
         if self.nodes.contains_key(&node_id) {
-            Err(format!("duplicate node insertion with ID {}", node_id))
+            Err(NodeViabilityError::DuplicateNodeID(node_id))
         } else {
             Ok(())
         }
@@ -250,12 +248,12 @@ impl Genome {
         &mut self,
         history: &mut History,
         config: &GeneticConfig,
-    ) -> Result<&Gene, String> {
+    ) -> Result<&Gene, Box<dyn std::error::Error>> {
         let non_sensor_nodes = self.select_non_sensor_nodes();
         let mut potential_inputs = self.select_potential_input_nodes(&non_sensor_nodes);
 
         if potential_inputs.is_empty() {
-            return Err("no viable input found".to_string());
+            return Err(GeneMutationError::AllInputsFullyConnected.into());
         }
 
         let mut rng = rand::thread_rng();
@@ -263,9 +261,9 @@ impl Genome {
 
         match self.find_node_pair(&potential_inputs, &non_sensor_nodes, config) {
             Some((source_node, dest_node)) => {
-                self.add_gene_mutation(source_node, dest_node, history, config)
+                Ok(self.add_gene_mutation(source_node, dest_node, history, config))
             }
-            None => Err("no valid input-output pair found".to_string()),
+            None => Err(GeneMutationError::NoInputOutputPairFound.into()),
         }
     }
 
@@ -289,7 +287,7 @@ impl Genome {
         self.nodes
             .iter()
             .filter_map(|(id, n)| {
-                if n.output_genes().len() < non_sensor_nodes.len() {
+                if n.output_genes().count() < non_sensor_nodes.len() {
                     Some(*id)
                 } else {
                     None
@@ -320,7 +318,6 @@ impl Genome {
 
     fn output_nodes_of(&self, node: &Node) -> HashSet<Innovation> {
         node.output_genes()
-            .iter()
             .map(|id| self.genes[id].output())
             .collect()
     }
@@ -347,7 +344,7 @@ impl Genome {
         output_node: Innovation,
         history: &mut History,
         config: &GeneticConfig,
-    ) -> Result<&Gene, String> {
+    ) -> &Gene {
         let gene_id = history.next_gene_innovation(input_node, output_node);
         let gene = self.add_gene(
             gene_id,
@@ -356,7 +353,7 @@ impl Genome {
             Gene::random_weight(config),
         );
         history.add_gene_innovation(input_node, output_node);
-        Ok(gene)
+        gene
     }
 
     /// Induces a _node mutation_ in the genome.
@@ -371,30 +368,22 @@ impl Genome {
         &mut self,
         history: &mut History,
         config: &GeneticConfig,
-    ) -> Result<(&Gene, &Node, &Gene), String> {
+    ) -> Result<(&Gene, &Node, &Gene), Box<dyn std::error::Error>> {
         let gene_to_split = match self.choose_random_gene() {
             Some(gene_to_split) => gene_to_split,
-            None => {
-                return Err(
-                    "attempted node mutation on empty or completely suppressed genome".to_string(),
-                )
-            }
+            None => return Err(NodeMutationError::EmptyGenome.into()),
         };
 
-        let mutation = self.get_node_mutation_innovation(gene_to_split, history);
-        self.add_node_mutation(gene_to_split, mutation, history, config)
+        let mutation = self.get_node_mutation_innovation_triplet(gene_to_split, history);
+        Ok(self.add_node_mutation(gene_to_split, mutation, history, config))
     }
 
     fn choose_random_gene(&self) -> Option<Innovation> {
-        let candidate_genes: Vec<&Gene> = self.genes.values().filter(|g| !g.suppressed).collect();
-
         let mut rng = rand::thread_rng();
-        candidate_genes
-            .choose(&mut rng)
-            .map(|gene| gene.innovation())
+        self.genes.keys().choose(&mut rng).cloned()
     }
 
-    fn get_node_mutation_innovation(
+    fn get_node_mutation_innovation_triplet(
         &mut self,
         gene_to_split: Innovation,
         history: &mut History,
@@ -415,13 +404,15 @@ impl Genome {
         mutation: (Innovation, Innovation, Innovation),
         history: &mut History,
         config: &GeneticConfig,
-    ) -> Result<(&Gene, &Node, &Gene), String> {
+    ) -> (&Gene, &Node, &Gene) {
         let (input_gene, new_node, output_gene) = mutation;
         let (input_node, output_node) = self.genes[&gene_to_split].endpoints();
 
-        if let Err(e) = self.check_node_viability(new_node) {
-            return Err(e);
-        }
+        // This used to be a check to return Err,
+        // but it doesn't seem like this could
+        // ever occurr. The calling function
+        // should have check for this already.
+        assert!(!self.nodes.contains_key(&new_node));
 
         history.add_node_innovation(gene_to_split, self.nodes.contains_key(&new_node));
 
@@ -448,11 +439,11 @@ impl Genome {
             );
         }
 
-        Ok((
+        (
             &self.genes[&input_gene],
             &self.nodes[&new_node],
             &self.genes[&output_gene],
-        ))
+        )
     }
 
     unsafe fn suppress_gene_unchecked(&mut self, gene: Innovation) {
@@ -554,7 +545,7 @@ impl Genome {
         let mut rng = rand::thread_rng();
         for (id, gene) in &other.genes {
             if let Some(own) = self.genes.get_mut(id) {
-                if rng.gen::<f32>() < 0.5 {
+                if rng.gen::<bool>() {
                     own.weight = gene.weight;
                 }
             }
@@ -615,8 +606,8 @@ impl Genome {
     }
 
     fn count_disjoint_genes(&self, common_innovations: &HashSet<Innovation>) -> usize {
-        let common_innovation_max = *common_innovations.iter().max().unwrap();
-        self.genes()
+        let common_innovation_max = common_innovations.iter().max().cloned().unwrap_or_default();
+        self.genes
             .keys()
             .cloned()
             .filter(|id| !common_innovations.contains(id) && *id < common_innovation_max)
@@ -624,13 +615,13 @@ impl Genome {
     }
 
     /// Returns a reference to the genome's gene map.
-    pub fn genes(&self) -> &HashMap<Innovation, Gene> {
-        &self.genes
+    pub fn genes(&self) -> impl Iterator<Item = &Gene> {
+        self.genes.values()
     }
 
     /// Returns a reference to the genome's node map.
-    pub fn nodes(&self) -> &HashMap<Innovation, Node> {
-        &self.nodes
+    pub fn nodes(&self) -> impl Iterator<Item = &Node> {
+        self.nodes.values()
     }
 
     /// Returns a the genome's current fitness.
@@ -639,7 +630,7 @@ impl Genome {
     }
 }
 
-impl fmt::Debug for Genome {
+impl fmt::Display for Genome {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut genes: Vec<&Gene> = self.genes.values().collect();
         let mut nodes: Vec<&Node> = self.nodes.values().collect();
@@ -716,12 +707,14 @@ mod tests {
                         .get(&g.input())
                         .unwrap()
                         .output_genes()
+                        .collect::<HashSet<_>>()
                         .contains(&g.innovation()));
                     assert!(full_genome
                         .nodes
                         .get(&g.output())
                         .unwrap()
                         .input_genes()
+                        .collect::<HashSet<_>>()
                         .contains(&g.innovation()));
                 }
             }
@@ -757,7 +750,7 @@ mod tests {
 
         let gene = gene.clone();
 
-        assert_eq!(genome.genes().len(), 1);
+        assert_eq!(genome.genes.len(), 1);
         assert_eq!(&genome.genes[&INNOVATION], &gene);
     }
 
@@ -852,8 +845,8 @@ mod tests {
         assert_eq!(node.innovation(), INNOVATION);
         assert_eq!(node.node_type(), NodeType::Neuron);
         assert_eq!(node.activation_type(), ACTIVATION_TYPE);
-        assert_eq!(node.input_genes().len(), 0);
-        assert_eq!(node.output_genes().len(), 0);
+        assert_eq!(node.input_genes().count(), 0);
+        assert_eq!(node.output_genes().count(), 0);
 
         let node = node.clone();
 
@@ -887,9 +880,9 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         let initial_weight = genome.genes[&0].weight;
-        println!("{:?}", genome);
+        println!("{}", genome);
         genome.mutate_weights(&config);
-        println!("{:?}", genome);
+        println!("{}", genome);
         assert_ne!(initial_weight, genome.genes[&0].weight);
     }
 
@@ -1004,14 +997,8 @@ mod tests {
         let mut genome = Genome::new(&config);
         let (input, node, output) = genome.mutate_nodes(&mut history, &config).unwrap();
 
-        assert_eq!(
-            input.innovation(),
-            *node.input_genes().iter().nth(0).unwrap()
-        );
-        assert_eq!(
-            output.innovation(),
-            *node.output_genes().iter().nth(0).unwrap()
-        );
+        assert_eq!(input.innovation(), *node.input_genes().next().unwrap());
+        assert_eq!(output.innovation(), *node.output_genes().next().unwrap());
         assert!(config.activation_types.contains(&node.activation_type()));
         assert_eq!(node.innovation(), genome.nodes[&2].innovation());
         assert_eq!(genome.genes.len(), 3);
@@ -1135,7 +1122,7 @@ mod tests {
 
         genome.reset_suppressions(&config);
 
-        assert!(genome.genes().values().all(|g| !g.suppressed));
+        assert!(genome.genes.values().all(|g| !g.suppressed));
     }
 
     #[test]

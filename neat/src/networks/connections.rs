@@ -49,5 +49,11 @@ impl fmt::Debug for Connection {
     }
 }
 
+impl fmt::Display for Connection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self as &dyn fmt::Debug).fmt(f)
+    }
+}
+
 #[cfg(test)]
 mod tests {}

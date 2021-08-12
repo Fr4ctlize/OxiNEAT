@@ -33,9 +33,12 @@ impl Network {
 
         let mut node_map = HashMap::new();
 
-        for (id, node) in genome.nodes() {
-            let network_node = Rc::new(RefCell::new(Node::new(*id, node.activation_type())));
-            node_map.insert(*id, network_node.clone());
+        for node in genome.nodes() {
+            let network_node = Rc::new(RefCell::new(Node::new(
+                node.innovation(),
+                node.activation_type(),
+            )));
+            node_map.insert(node.innovation(), network_node.clone());
             match node.node_type() {
                 NodeType::Sensor => network.inputs.push(network_node),
                 NodeType::Neuron => network.hidden.push(network_node),
@@ -43,15 +46,21 @@ impl Network {
             }
         }
 
-        for (id, gene) in genome.genes().iter().filter(|(_, g)| !g.suppressed) {
+        for gene in genome.genes().filter(|g| !g.suppressed) {
             if gene.input() == gene.output() {
                 let node = node_map[&gene.input()].clone();
-                node.borrow_mut().recursive_connection =
-                    Some(Connection::new(*id, Rc::downgrade(&node), gene.weight));
+                node.borrow_mut().recursive_connection = Some(Connection::new(
+                    gene.innovation(),
+                    Rc::downgrade(&node),
+                    gene.weight,
+                ));
             } else {
                 let connection_output = node_map[&gene.output()].clone();
-                let connection =
-                    Connection::new(*id, Rc::downgrade(&connection_output), gene.weight);
+                let connection = Connection::new(
+                    gene.innovation(),
+                    Rc::downgrade(&connection_output),
+                    gene.weight,
+                );
                 node_map[&gene.input()]
                     .borrow_mut()
                     .outputs
@@ -151,6 +160,12 @@ impl fmt::Debug for Network {
             .field("hidden", &hidden)
             .field("outputs", &outputs)
             .finish()
+    }
+}
+
+impl fmt::Display for Network {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self as &dyn fmt::Debug).fmt(f)
     }
 }
 

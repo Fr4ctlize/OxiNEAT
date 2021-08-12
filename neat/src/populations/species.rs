@@ -74,7 +74,10 @@ impl Species {
             .genomes
             .iter()
             .map(|g| g.fitness)
-            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .max_by(|a, b| {
+                a.partial_cmp(b)
+                    .unwrap_or_else(|| panic!("uncomparable fitness value detected"))
+            })
             .unwrap_or(0.0);
         if max_fitness <= self.max_fitness {
             self.stagnation += 1;
@@ -102,10 +105,13 @@ impl Species {
 
     /// Returns the currently best-performing genome.
     pub fn champion(&self) -> &Genome {
-        self
-            .genomes
+        self.genomes
             .iter()
-            .max_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap())
+            .max_by(|g1, g2| {
+                g1.fitness
+                    .partial_cmp(&g2.fitness)
+                    .unwrap_or_else(|| panic!("uncomparable fitness value detected"))
+            })
             .expect("empty species has no champion")
     }
 

@@ -1,14 +1,16 @@
 mod config;
+mod errors;
 mod log;
 mod offspring_factory;
 mod species;
 
 pub use config::PopulationConfig;
+use errors::*;
 pub use log::*;
+use offspring_factory::OffspringFactory;
 pub use species::{Species, SpeciesID};
 
 use crate::genomes::{GeneticConfig, Genome, History};
-use offspring_factory::OffspringFactory;
 
 use std::collections::HashMap;
 
@@ -78,10 +80,10 @@ impl Population {
     /// Returns an error if the population has become degenerate
     /// (zero maximum fitness or all genomes are culled due to
     /// stagnation).
-    /// 
+    ///
     /// [adoption rate]: crate::populations::PopConfig::adoption_rate
     /// [Nodine, T., 2010]: https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.175.2884&rep=rep1&type=pdf
-    pub fn evolve(&mut self) -> Result<(), ()> {
+    pub fn evolve(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         match self.allot_offspring() {
             Ok(allotted_offspring) => {
                 self.species.iter_mut().for_each(Species::update_fitness);
@@ -92,7 +94,7 @@ impl Population {
                 self.history.clear();
                 Ok(())
             }
-            Err(_) => Err(()),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -103,10 +105,10 @@ impl Population {
     /// # Errors
     ///
     /// Returns an error if all genome's fitnesses are 0.
-    fn allot_offspring(&self) -> Result<Vec<usize>, ()> {
+    fn allot_offspring(&self) -> Result<Vec<usize>, OffspringAllotmentError> {
         match self.get_species_adjusted_fitness() {
             Some(adjusted_fitnesses) => Ok(round_retain_sum(&adjusted_fitnesses)),
-            None => Err(()),
+            None => Err(OffspringAllotmentError::DegeneratePopulation),
         }
     }
 
@@ -168,9 +170,11 @@ impl Population {
 
     fn sort_species_members_by_decreasing_fitness(&mut self) {
         for species in &mut self.species {
-            species
-                .genomes
-                .sort_unstable_by(|g1, g2| g2.fitness.partial_cmp(&g1.fitness).unwrap());
+            species.genomes.sort_unstable_by(|g1, g2| {
+                g2.fitness
+                    .partial_cmp(&g1.fitness)
+                    .unwrap_or_else(|| panic!("invalid genome fitnesses detected (NaN)"))
+            });
         }
     }
 
@@ -259,7 +263,11 @@ impl Population {
         self.species
             .iter()
             .flat_map(|s| &s.genomes)
-            .max_by(|g1, g2| g1.fitness.partial_cmp(&g2.fitness).unwrap())
+            .max_by(|g1, g2| {
+                g1.fitness
+                    .partial_cmp(&g2.fitness)
+                    .unwrap_or_else(|| panic!("invalid genome fitnesses detected (NaN)"))
+            })
             .expect("empty population has no champion")
     }
 

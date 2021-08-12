@@ -113,7 +113,13 @@ impl EvolutionLogger {
             .species
             .iter()
             .flat_map(|s| s.genomes.iter())
-            .map(|g| (g.genes().len() as f32, g.nodes().len() as f32, g.fitness))
+            .map(|g| {
+                (
+                    g.genes().count() as f32,
+                    g.nodes().count() as f32,
+                    g.fitness,
+                )
+            })
             .collect();
         self.logs.push(Log {
             generation_number: population.generation(),

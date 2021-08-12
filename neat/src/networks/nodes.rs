@@ -115,5 +115,11 @@ impl fmt::Debug for Node {
     }
 }
 
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self as &dyn fmt::Debug).fmt(f)
+    }
+}
+
 #[cfg(test)]
 mod tests {}

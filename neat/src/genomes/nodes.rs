@@ -29,7 +29,7 @@ pub enum NodeType {
 
 /// Nodes are the structural elements of genomes
 /// between which genes are created.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Node {
     id: Innovation,
     inputs: HashSet<Innovation>,
@@ -52,9 +52,9 @@ impl Node {
 
     /// Adds the passed innovation number to the node's
     /// list of input genes.
-    /// 
+    ///
     /// # Panics
-    /// This function panics if the gene is already 
+    /// This function panics if the gene is already
     /// in the node's inputs.
     pub fn add_input_gene(&mut self, input_id: Innovation) {
         if !self.inputs.contains(&input_id) {
@@ -66,7 +66,7 @@ impl Node {
 
     /// Adds the passed innovation number to the node's
     /// list of output genes.
-    /// 
+    ///
     /// # Panics
     /// This function panics if the gene is already
     /// in the node's outputs.
@@ -84,13 +84,13 @@ impl Node {
     }
 
     /// Returns the list of the node's input genes.
-    pub fn input_genes(&self) -> &HashSet<Innovation> {
-        &self.inputs
+    pub fn input_genes(&self) -> impl Iterator<Item = &Innovation> {
+        self.inputs.iter()
     }
 
     /// Returns the list of the node's output genes.
-    pub fn output_genes(&self) -> &HashSet<Innovation> {
-        &self.outputs
+    pub fn output_genes(&self) -> impl Iterator<Item = &Innovation> {
+        self.outputs.iter()
     }
 
     /// Returns the node's node type.
@@ -104,7 +104,7 @@ impl Node {
     }
 }
 
-impl fmt::Debug for Node {
+impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

@@ -217,16 +217,14 @@ impl Genome {
     /// Induces a _weight mutation_ in the genome.
     pub fn mutate_weights(&mut self, config: &GeneticConfig) {
         let mut rng = rand::thread_rng();
-        let max_innovation = self
-            .genes
-            .values()
-            .map(Gene::innovation)
-            .max()
-            .unwrap_or_default()
-            .max(1) as f32;
+        let max_innovation = self.genes.keys().copied().max().unwrap_or_default().max(1) as f32;
         for gene in self.genes.values_mut() {
+            // Older genes have a lower chance of being reset,
+            // with the assumption being they've had more time
+            // to settle into an optimised value.
             if rng.gen::<f32>()
-                < config.weight_reset_chance * (gene.innovation() as f32 / max_innovation).powf(2.0)
+                < config.weight_reset_chance
+                    * ((gene.innovation() + 1) as f32 / max_innovation).powf(2.0)
             {
                 gene.randomize_weight(config);
             } else if rng.gen::<f32>() < config.weight_nudge_chance {

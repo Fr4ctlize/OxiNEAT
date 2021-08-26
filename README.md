@@ -1,4 +1,4 @@
-# rustneat
+# OxiNEAT
 
 This repositary contains
  - The OxiNEAT crate (my implementation of NeuroEvolution of Augmenting Topologies in Rust).

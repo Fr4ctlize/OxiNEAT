@@ -103,15 +103,16 @@ impl History {
     ///
     /// If `duplicate` is `true` and the node mutation is
     /// already registered, the returned innovation numbers
-    /// will be computed as if it were a new mutation. This
-    /// is used in situations in which the mutating genome
+    /// will be computed as if it were a new mutation, and
+    /// the new numbers will substitute the previously assigned
+    /// ones. This is used in situations in which the mutating genome
     /// already split the same gene in a previous mutation,
     /// which would result in duplicate genes and nodes within
     /// the same genome. This can be detected if the numbers
     /// returned by this function without setting `duplicate`
     /// to `true` refer to genes/nodes already present in the
     /// genome.
-    pub fn add_node_innovation(
+    pub fn add_node_innovation( 
         &mut self,
         split_gene: Innovation,
         duplicate: bool,

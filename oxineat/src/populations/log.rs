@@ -4,14 +4,20 @@ use crate::Innovation;
 
 use std::fmt;
 
+/// Defines different possible reporting levels.
 #[derive(Clone, Copy, Debug)]
 pub enum ReportingLevel {
+    /// Clones the entire population.
     AllGenomes,
+    /// Clones species and their champions.
     SpeciesChampions,
+    /// Clones only the population champion.
     PopulationChampion,
+    /// Clones no genomes.
     NoGenomes,
 }
 
+/// A snapshot of a population.
 #[derive(Clone, Debug)]
 pub struct Log {
     pub generation_number: usize,
@@ -48,6 +54,7 @@ impl fmt::Display for Log {
     }
 }
 
+/// A struct for reporting basic statistical data.
 #[derive(Clone, Debug)]
 pub struct Stats {
     pub maximum: f32,
@@ -57,6 +64,7 @@ pub struct Stats {
 }
 
 impl Stats {
+    /// Returns statistics about numbers in a sequence.
     pub fn from(data: &mut dyn Iterator<Item = f32>) -> Stats {
         let mut data: Vec<f32> = data.collect();
         let mid = data.len() / 2;
@@ -86,14 +94,21 @@ impl Stats {
     }
 }
 
+/// A reporting-level dependant store
+/// of genomes from a population.
 #[derive(Clone, Debug)]
 pub enum Generation {
+    /// Species IDs, genomes and stagnation level.
     Species(Vec<(SpeciesID, Vec<Genome>, usize)>),
+    /// Only species IDs, species champions, and stagnation level.
     SpeciesChampions(Vec<(SpeciesID, Genome, usize)>),
+    /// Only population champion.
     PopulationChampion(Genome),
+    /// Empty.
     None,
 }
 
+/// A log of the evolution of a population over time.
 #[derive(Clone, Debug)]
 pub struct EvolutionLogger {
     reporting_level: ReportingLevel,
@@ -101,6 +116,7 @@ pub struct EvolutionLogger {
 }
 
 impl EvolutionLogger {
+    /// Returns a logger with the appropiate reporting level.
     pub fn new(reporting_level: ReportingLevel) -> EvolutionLogger {
         EvolutionLogger {
             reporting_level,
@@ -108,6 +124,7 @@ impl EvolutionLogger {
         }
     }
 
+    /// Store a snapshot of a population.
     pub fn log(&mut self, population: &Population) {
         let stats: Vec<(f32, f32, f32)> = population
             .species
@@ -150,6 +167,7 @@ impl EvolutionLogger {
         })
     }
 
+    /// Iterate over all logged snapshots.
     pub fn iter(&self) -> impl Iterator<Item = &Log> {
         self.logs.iter()
     }

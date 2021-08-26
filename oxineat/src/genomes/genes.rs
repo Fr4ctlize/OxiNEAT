@@ -4,17 +4,18 @@ use crate::Innovation;
 use std::fmt;
 
 use rand::{thread_rng, Rng};
+use serde::{Serialize, Deserialize};
 
 /// Genes are the principal components of genomes.
 /// They are created between two nodes, and become
 /// network connections in the genome's phenotype.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Gene {
     id: Innovation,
     input: Innovation,
     output: Innovation,
-    pub weight: f32,
-    pub suppressed: bool,
+    weight: f32,
+    suppressed: bool,
 }
 
 impl Gene {
@@ -70,6 +71,26 @@ impl Gene {
     /// Returns the gene's output node's innovation number.
     pub fn output(&self) -> Innovation {
         self.output
+    }
+
+    /// Returns the gene's weight.
+    pub fn weight(&self) -> f32 {
+        self.weight
+    }
+
+    /// Sets the gene's weight
+    pub fn set_weight(&mut self, w: f32) {
+        self.weight = w;
+    }
+
+    /// Returns the gene's suppression status.
+    pub fn suppressed(&self) -> bool {
+        self.suppressed
+    }
+
+    /// Sets the gene's suppression status.
+    pub fn set_suppressed(&mut self, suppression: bool) {
+        self.suppressed = suppression;
     }
 
     /// Returns the gene's innput and output's innovation numbers.

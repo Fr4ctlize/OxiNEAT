@@ -26,6 +26,7 @@ impl<'a> OffspringFactory<'a> {
         }
     }
 
+    /// Generate the alloted offspring.
     pub(super) fn generate_offspring(
         &mut self,
         allotted_offspring: &[usize],

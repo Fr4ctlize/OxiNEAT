@@ -1,3 +1,8 @@
+//! Genomes are the focus of evolution in NEAT.
+//! They are a collection of genes and nodes that can be instantiated
+//! as a phenotype (a neural network). Genomes can be progressively mutated,
+//! thus adding complexity and functionality.
+
 mod config;
 mod errors;
 mod genes;
@@ -13,17 +18,15 @@ pub use nodes::{ActivationType, Node, NodeType};
 use crate::Innovation;
 
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
+use serde::{Serialize, Deserialize};
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
 use std::fmt;
 
-/// Genomes are the focus of evolution in NEAT.
-/// They are a collection of genes and nodes that can be instantiated
-/// as a phenotype (a neural network) and evaluated
-/// for performance in a task, which results numerically in
-/// their fitness score. Genomes can be progressively mutated,
-/// thus adding complexity and functionality.
-#[derive(Clone, PartialEq, Debug)]
+/// A mutable collection of genes and nodes.
+/// 
+/// Suports Serde for convenient genome saving and loading.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Genome {
     genes: HashMap<Innovation, Gene>,
     nodes: HashMap<Innovation, Node>,
@@ -445,7 +448,7 @@ impl Genome {
     }
 
     unsafe fn suppress_gene_unchecked(&mut self, gene: Innovation) {
-        self.genes.get_mut(&gene).unwrap().suppressed = true;
+        self.genes.get_mut(&gene).unwrap().set_suppressed(true);
     }
 
     /// Combines the genome with an `other` genome and
@@ -483,7 +486,7 @@ impl Genome {
             child.mutate_all(history, config);
         }
 
-        child.reset_suppressions(config);
+        child.reset_suppresseds(config);
 
         child
     }
@@ -522,7 +525,7 @@ impl Genome {
 
         for (id, gene) in &other.genes {
             if !self.node_pairings.contains(&(gene.input(), gene.output())) {
-                self.add_gene(*id, gene.input(), gene.output(), gene.weight);
+                self.add_gene(*id, gene.input(), gene.output(), gene.weight());
             }
         }
     }
@@ -532,7 +535,7 @@ impl Genome {
     fn average_common_genes(&mut self, other: &Genome) {
         for (id, others_gene) in &other.genes {
             if let Some(own_gene) = self.genes.get_mut(id) {
-                own_gene.weight = (own_gene.weight + others_gene.weight) / 2.0;
+                own_gene.set_weight((own_gene.weight() + others_gene.weight()) / 2.0);
             }
         }
     }
@@ -544,18 +547,18 @@ impl Genome {
         for (id, gene) in &other.genes {
             if let Some(own) = self.genes.get_mut(id) {
                 if rng.gen::<bool>() {
-                    own.weight = gene.weight;
+                    own.set_weight(gene.weight());
                 }
             }
         }
     }
 
     /// Unsuppresses suppressed genes with probability `config.suppression_reset_chance`;
-    fn reset_suppressions(&mut self, config: &GeneticConfig) {
+    fn reset_suppresseds(&mut self, config: &GeneticConfig) {
         let mut rng = rand::thread_rng();
         for gene in self.genes.values_mut() {
-            if gene.suppressed && rng.gen::<f32>() < config.suppression_reset_chance {
-                gene.suppressed = false;
+            if gene.suppressed() && rng.gen::<f32>() < config.suppression_reset_chance {
+                gene.set_suppressed(false);
             }
         }
     }
@@ -590,7 +593,7 @@ impl Genome {
         gene_set_g1
             .intersection(&gene_set_g2)
             .copied()
-            .map(|id| (id, (g1.genes[&id].weight, g2.genes[&id].weight)))
+            .map(|id| (id, (g1.genes[&id].weight(), g2.genes[&id].weight())))
             .unzip()
     }
 
@@ -744,7 +747,7 @@ mod tests {
         assert_eq!(gene.innovation(), INNOVATION);
         assert_eq!(gene.input(), INPUT);
         assert_eq!(gene.output(), OUTPUT);
-        assert_eq!(gene.weight, WEIGHT);
+        assert_eq!(gene.weight(), WEIGHT);
 
         let gene = gene.clone();
 
@@ -877,11 +880,11 @@ mod tests {
         config.weight_bound = 3.0;
 
         let mut genome = Genome::new(&config);
-        let initial_weight = genome.genes[&0].weight;
+        let initial_weight = genome.genes[&0].weight();
         println!("{}", genome);
         genome.mutate_weights(&config);
         println!("{}", genome);
-        assert_ne!(initial_weight, genome.genes[&0].weight);
+        assert_ne!(initial_weight, genome.genes[&0].weight());
     }
 
     /// It is possible this test will fail
@@ -899,9 +902,9 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         genome.mutate_weights(&config);
-        let initial_weight = genome.genes[&0].weight;
+        let initial_weight = genome.genes[&0].weight();
         genome.mutate_weights(&config);
-        assert_ne!(initial_weight, genome.genes[&0].weight);
+        assert_ne!(initial_weight, genome.genes[&0].weight());
     }
 
     #[test]
@@ -914,9 +917,9 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         genome.mutate_weights(&config);
-        let initial_weight = genome.genes[&0].weight;
+        let initial_weight = genome.genes[&0].weight();
         genome.mutate_weights(&config);
-        assert_eq!(initial_weight, genome.genes[&0].weight);
+        assert_eq!(initial_weight, genome.genes[&0].weight());
     }
 
     #[test]
@@ -1001,7 +1004,7 @@ mod tests {
         assert_eq!(node.innovation(), genome.nodes[&2].innovation());
         assert_eq!(genome.genes.len(), 3);
         assert_eq!(genome.nodes.len(), 3);
-        assert_eq!(genome.genes[&0].suppressed, true);
+        assert_eq!(genome.genes[&0].suppressed(), true);
     }
 
     #[test]
@@ -1070,10 +1073,10 @@ mod tests {
 
         genome1.average_common_genes(&genome2);
 
-        assert_eq!(genome1.genes[&0].weight, 2.0);
-        assert_eq!(genome1.genes[&1].weight, 0.0);
-        assert_eq!(genome1.genes[&2].weight, 3.25);
-        assert_eq!(genome1.genes[&3].weight, 4.0);
+        assert_eq!(genome1.genes[&0].weight(), 2.0);
+        assert_eq!(genome1.genes[&1].weight(), 0.0);
+        assert_eq!(genome1.genes[&2].weight(), 3.25);
+        assert_eq!(genome1.genes[&3].weight(), 4.0);
     }
 
     #[test]
@@ -1099,14 +1102,14 @@ mod tests {
 
         genome1.randomly_choose_common_genes(&genome2);
 
-        assert!([1.0, 3.0].contains(&genome1.genes[&0].weight));
-        assert!([2.0, -2.0].contains(&genome1.genes[&1].weight));
-        assert!([3.0, 3.5].contains(&genome1.genes[&2].weight));
-        assert!([4.0].contains(&genome1.genes[&3].weight));
+        assert!([1.0, 3.0].contains(&genome1.genes[&0].weight()));
+        assert!([2.0, -2.0].contains(&genome1.genes[&1].weight()));
+        assert!([3.0, 3.5].contains(&genome1.genes[&2].weight()));
+        assert!([4.0].contains(&genome1.genes[&3].weight()));
     }
 
     #[test]
-    fn reset_suppressions() {
+    fn reset_suppresseds() {
         let mut config = GeneticConfig::default();
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(1).unwrap();
@@ -1114,13 +1117,13 @@ mod tests {
         config.suppression_reset_chance = 1.0;
 
         let mut genome = Genome::new(&config);
-        genome.add_gene(0, 0, 2, 3.0).suppressed = true;
-        genome.add_gene(1, 1, 2, 4.0).suppressed = true;
-        genome.add_gene(2, 2, 2, 5.0).suppressed = true;
+        genome.add_gene(0, 0, 2, 3.0).set_suppressed(true);
+        genome.add_gene(1, 1, 2, 4.0).set_suppressed(true);
+        genome.add_gene(2, 2, 2, 5.0).set_suppressed(true);
 
-        genome.reset_suppressions(&config);
+        genome.reset_suppresseds(&config);
 
-        assert!(genome.genes.values().all(|g| !g.suppressed));
+        assert!(genome.genes.values().all(|g| !g.suppressed()));
     }
 
     #[test]

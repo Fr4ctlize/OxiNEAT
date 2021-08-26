@@ -16,8 +16,8 @@ pub struct GeneticConfig {
     /// If fewer than [`output_count`] are specified,
     /// the default is [`Sigmoid`].
     /// 
-    /// [`output_count`]: crate::genomes::config::GeneticConfig::output_count;
-    /// [`Sigmoid`]: crate::genomes::nodes::ActivationType;
+    /// [`output_count`]: GeneticConfig::output_count
+    /// [`Sigmoid`]: crate::genomes::ActivationType
     pub output_activation_types: Vec<ActivationType>,
     /// Chance of producing a mutated clone of a parent
     /// during mating.

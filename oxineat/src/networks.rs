@@ -1,3 +1,8 @@
+//! A Network is a simple near-isomorphism of a Genome
+//! generated as the phenotypes of said Genome,
+//! with suppressed genes being ignored. Genes are
+//! converted into connections, and genome nodes
+//! into network nodes.
 mod connections;
 mod nodes;
 use connections::Connection;
@@ -10,11 +15,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
-/// A Network is a simple near-isomorphism of a Genome
-/// generated as the phenotypes of said Genome,
-/// with suppressed genes being ignored. Genes are
-/// converted into connections, and genome nodes
-/// into network nodes.
+/// A arbitrarily-structured neural network.
 #[derive(Clone)]
 pub struct Network {
     inputs: Vec<Rc<RefCell<Node>>>,
@@ -46,20 +47,20 @@ impl Network {
             }
         }
 
-        for gene in genome.genes().filter(|g| !g.suppressed) {
+        for gene in genome.genes().filter(|g| !g.suppressed()) {
             if gene.input() == gene.output() {
                 let node = node_map[&gene.input()].clone();
                 node.borrow_mut().recursive_connection = Some(Connection::new(
                     gene.innovation(),
                     Rc::downgrade(&node),
-                    gene.weight,
+                    gene.weight(),
                 ));
             } else {
                 let connection_output = node_map[&gene.output()].clone();
                 let connection = Connection::new(
                     gene.innovation(),
                     Rc::downgrade(&connection_output),
-                    gene.weight,
+                    gene.weight(),
                 );
                 node_map[&gene.input()]
                     .borrow_mut()
@@ -197,7 +198,7 @@ mod tests {
             genome.add_gene(ids[i], inputs[i], outputs[i], weights[i]);
         }
         // Suppressed gene shouldn't be expressed in network.
-        genome.add_gene(1, 0, 3, -1.0).suppressed = true;
+        genome.add_gene(1, 0, 3, -1.0).set_suppressed(true);
 
         let network = Network::from(&genome);
         assert_eq!(network.inputs.len(), 2);

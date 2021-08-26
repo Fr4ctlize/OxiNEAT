@@ -24,8 +24,8 @@ pub struct SpeciesID(pub usize, pub usize);
 /// generations without improving the species' fitness,
 /// and will thereafter be penalized when mating.
 ///
-/// [genetic distance]: crate::populations::PopConfig::distance_threshold
-/// [`stagnation_threshold`]: crate::populations::PopConfig::survival_threshold
+/// [genetic distance]: PopulationConfig::distance_threshold
+/// [`stagnation_threshold`]: PopulationConfig::survival_threshold
 #[derive(Debug, Clone)]
 pub struct Species {
     id: SpeciesID,

@@ -4,25 +4,25 @@ use std::fmt;
 use crate::Innovation;
 
 #[derive(Debug)]
-pub enum GeneViabilityError {
+pub(crate) enum GeneViabilityError {
     DuplicateGeneID(Innovation),
     NonexistantEndpoints(Innovation, Innovation),
     DuplicateGeneWithEndpoints(Innovation, (Innovation, Innovation)),
 }
 
 #[derive(Debug)]
-pub enum NodeViabilityError {
+pub(crate) enum NodeViabilityError {
     DuplicateNodeID(Innovation),
 }
 
 #[derive(Debug)]
-pub enum GeneMutationError {
+pub(crate) enum GeneMutationError {
     AllInputsFullyConnected,
     NoInputOutputPairFound,
 }
 
 #[derive(Debug)]
-pub enum NodeMutationError {
+pub(crate) enum NodeMutationError {
     EmptyGenome,
 }
 

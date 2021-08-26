@@ -1,3 +1,7 @@
+//! A Population is a collection of genomes grouped
+//! into species that can be evolved using a genome
+//! evaluation function as the source of selective
+//! pressure.
 mod config;
 mod errors;
 mod log;
@@ -16,10 +20,7 @@ use std::collections::HashMap;
 
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
 
-/// A Population is a collection of genomes grouped
-/// into species that can be evolved using a genome
-/// evaluation function as the source of selective
-/// pressure.
+/// A population of genomes.
 pub struct Population {
     species: Vec<Species>,
     history: History,
@@ -81,7 +82,7 @@ impl Population {
     /// (zero maximum fitness or all genomes are culled due to
     /// stagnation).
     ///
-    /// [adoption rate]: crate::populations::PopConfig::adoption_rate
+    /// [adoption rate]: PopulationConfig::adoption_rate
     /// [Nodine, T., 2010]: https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.175.2884&rep=rep1&type=pdf
     pub fn evolve(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         match self.allot_offspring() {
@@ -149,9 +150,9 @@ impl Population {
     /// Offspring are assigned randomly to the species
     /// of either one of the parents.
     ///
-    /// [species' elite]: crate::populations::PopConfig::elitism
-    /// [top performers]: crate::populations::PopConfig::survival_threshold
-    /// [chance]: crate::populations::PopConfig::interspecies_mating_chance
+    /// [species' elite]: PopulationConfig::elitism
+    /// [top performers]: PopulationConfig::survival_threshold
+    /// [chance]: PopulationConfig::interspecies_mating_chance
     fn generate_offspring(&mut self, allotted_offspring: &[usize]) {
         self.sort_species_members_by_decreasing_fitness();
 

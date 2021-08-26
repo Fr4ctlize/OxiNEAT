@@ -1,12 +1,14 @@
 use crate::Innovation;
 
+use serde::{Serialize, Deserialize};
+
 use std::collections::HashSet;
 use std::fmt;
 
 /// An ActivationType represents the type
 /// of activation function the node's network
 /// equivalent will use.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub enum ActivationType {
     Sigmoid,
     Identity,
@@ -17,7 +19,7 @@ pub enum ActivationType {
 
 /// A NodeType indicates the function of
 /// the node's network equivalent.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub enum NodeType {
     /// Input nodes.
     Sensor,
@@ -29,7 +31,7 @@ pub enum NodeType {
 
 /// Nodes are the structural elements of genomes
 /// between which genes are created.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Node {
     id: Innovation,
     inputs: HashSet<Innovation>,

@@ -1,26 +1,40 @@
-use oxineat::genomes::{ActivationType, Genome};
-use oxineat::networks::Network;
-use oxineat::populations::{Population, Stats};
-// use neat::populations::{EvolutionLogger, ReportingLevel};
-use oxineat::{GeneticConfig, PopulationConfig};
+# OxiNEAT
+An implementation of **NeuroEvolution of Augmenting Topologies** (*NEAT*),
+following the 2002 paper: <http://nn.cs.utexas.edu/keyword?stanley:ec02>
 
+It is designed to be highly-configurable, and supports population 
+logging throughout the evolutionary process.
+
+This crate was implemented as both a learning exercise in using Rust
+and as a tool for my own experimentation. Critiques and contributions
+are welcome.
+
+This is still very much a work-in-progress, so interfaces and implementations
+may change in the future.
+
+# Example
+```rust
+use oxineat::{
+    PopulationConfig,
+    GeneticConfig,
+    genomes::{Genome, ActivationType},
+    networks::Network,
+    populations::Population,
+};
 use std::num::NonZeroUsize;
 
-use rayon::prelude::*;
-use std::sync::{Arc, Mutex};
-
+// Allowed error margin for neural net answers.
 const ERROR_MARGIN: f32 = 0.3;
 
+// Evaluator function.
 fn evaluate_xor(genome: &Genome) -> f32 {
     let mut network = Network::from(genome);
-
     let values = [
         ([1.0, 0.0, 0.0], 0.0),
         ([1.0, 0.0, 1.0], 1.0),
         ([1.0, 1.0, 0.0], 1.0),
         ([1.0, 1.0, 1.0], 0.0),
     ];
-
     let mut errors = [0.0, 0.0, 0.0, 0.0];
     for (i, (input, output)) in values.iter().enumerate() {
         network.clear_state();
@@ -33,11 +47,11 @@ fn evaluate_xor(genome: &Genome) -> f32 {
             errors[i] = 0.0;
         }
     }
-
     (4.0 - errors.iter().copied().sum::<f32>()).powf(2.0)
 }
 
 fn main() {
+    // Configuration for genomes.
     let genetic_config = GeneticConfig {
         input_count: NonZeroUsize::new(3).unwrap(),
         output_count: NonZeroUsize::new(1).unwrap(),
@@ -60,7 +74,7 @@ fn main() {
         disjoint_gene_factor: 1.0,
         common_weight_factor: 0.4,
     };
-
+    // Configuration for the population.
     let population_config = PopulationConfig {
         population_size: NonZeroUsize::new(150).unwrap(),
         distance_threshold: 3.0,
@@ -72,48 +86,32 @@ fn main() {
         stagnation_penalty: 1.0,
     };
 
-    // let logger = Arc::new(Mutex::new(EvolutionLogger::new(
-    // ReportingLevel::SpeciesChampions,
-    // )));
-    let generations = Arc::new(Mutex::new(vec![]));
-
-    const ITERATIONS: usize = 2000;
-    (0..ITERATIONS).into_par_iter().for_each(|_| {
-        let mut population = Population::new(population_config.clone(), genetic_config.clone());
-        for _ in 0..100 {
-            population.evaluate_fitness(evaluate_xor);
-            // logger.lock().unwrap().log(&population);
-            {
-                if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {
-                    break;
-                }
-            }
-            if let Err(e) = population.evolve() {
-                eprintln!("{}", e);
-                // population.reset()
-                break
-            }
-        }
+    let mut population = Population::new(population_config, genetic_config);
+    for _ in 0..100 {
+        population.evaluate_fitness(evaluate_xor);
         if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {
-            generations
-                .lock()
-                .unwrap()
-                .push(Some(population.generation()));
-        } else {
-            generations.lock().unwrap().push(None);
+            println!("Solution found: {}", population.champion());
+            break;
         }
-    });
-
-    let generations = generations.lock().unwrap();
-
-    println!(
-        "Successful run generation count {:?}, {}% failure rate over {} iterations",
-        Stats::from(
-            &mut generations
-                .iter()
-                .filter_map(|g| g.as_ref().map(|g| *g as f32))
-        ),
-        generations.iter().filter(|g| g.is_none()).count() as f32 * 100.0 / ITERATIONS as f32,
-        ITERATIONS
-    );
+        if let Err(e) = population.evolve() {
+            eprintln!("{}", e);
+            break;
+        }
+    }
 }
+```
+
+#### License
+
+<sup>
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+</sup>
+
+<br>
+
+<sub>
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
+</sub>

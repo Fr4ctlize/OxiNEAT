@@ -3,6 +3,10 @@ name = "oxineat"
 version = "0.1.0"
 authors = ["Fr4ctlize <fortizk@outlook.com>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "A Rust implementation of NeuroEvolution of Augmenting Topologies"
+repository = "https://github.com/Fr4ctlize/OxiNEAT"
+readme = "README.md"
 
 [dependencies]
 rand = "0.8.3"

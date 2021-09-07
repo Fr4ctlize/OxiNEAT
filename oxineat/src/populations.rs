@@ -59,12 +59,14 @@ impl Population {
     ///
     /// The return value of the evaluation function
     /// should be positive.
-    pub fn evaluate_fitness<E>(&mut self, evaluator: E)
+    pub fn evaluate_fitness<E>(&mut self, mut evaluator: E)
     where
-        E: Fn(&Genome) -> f32,
+        E: FnMut(&Genome) -> f32,
     {
         for genome in self.species.iter_mut().flat_map(|s| &mut s.genomes) {
-            genome.fitness = evaluator(genome);
+            let fitness = evaluator(genome);
+            assert!(fitness >= 0.0, "fitness function return a negative value");
+            genome.fitness = fitness;
         }
     }
 
@@ -204,7 +206,7 @@ impl Population {
     fn respeciate(&mut self, genome: Genome, new_species_id: SpeciesID) -> bool {
         // Assign if possible to a currently existing species.
         for species in &mut self.species {
-            if genome.genetic_distance_to(species.representative(), &self.genetic_config)
+            if Genome::genetic_distance(&genome, species.representative(), &self.genetic_config)
                 < self.population_config.distance_threshold
             {
                 species.add_genome(genome);
@@ -227,9 +229,11 @@ impl Population {
             let mut i = 0;
             while i < species.genomes.len() {
                 if rng.gen::<f32>() < self.population_config.adoption_rate
-                    && species.genomes[i]
-                        .genetic_distance_to(species.representative(), &self.genetic_config)
-                        >= self.population_config.distance_threshold
+                    && Genome::genetic_distance(
+                        &species.genomes[i],
+                        species.representative(),
+                        &self.genetic_config,
+                    ) >= self.population_config.distance_threshold
                 {
                     incompatibles.push(species.genomes.swap_remove(i));
                 } else {

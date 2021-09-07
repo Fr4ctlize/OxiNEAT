@@ -19,11 +19,8 @@ pub struct GeneticConfig {
     /// [`output_count`]: GeneticConfig::output_count
     /// [`Sigmoid`]: crate::genomes::ActivationType
     pub output_activation_types: Vec<ActivationType>,
-    /// Chance of producing a mutated clone of a parent
-    /// during mating.
-    pub mutate_only_chance: f32,
-    /// Chance of producing a non-mutated child during mating.
-    pub mate_only_chance: f32,
+    /// Chance of child mutation during mating.
+    pub child_mutation_chance: f32,
     /// Chance that common gene weights are averaged during mating,
     /// instead of copying the weight from a randomly chosen parent.
     pub mate_by_averaging_chance: f32,
@@ -44,13 +41,17 @@ pub struct GeneticConfig {
     ///
     /// [`weight_bound`]: crate::GeneticConfig::weight_bound
     pub weight_mutation_power: f32,
-    /// Chance of a node mutation taking place during mating.
-    pub node_mutation_chance: f32,
-    /// Chance of a gene mutation taking place during mating.
-    pub gene_mutation_chance: f32,
+    /// Chance of a node addition mutation taking place during mating.
+    pub node_addition_mutation_chance: f32,
+    /// Chance of a gene addition mutation taking place during mating.
+    pub gene_addition_mutation_chance: f32,
+    /// Chance of a node deletion mutation taking place during mating.
+    pub node_deletion_mutation_chance: f32,
+    /// Chance of a gene deletion mutation taking place during mating.
+    pub gene_deletion_mutation_chance: f32,
     /// Maximum number of gene mutation attempts before
     /// mutation returns with failure.
-    pub max_gene_mutation_attempts: usize,
+    pub max_gene_addition_mutation_attempts: usize,
     /// Chance that a recursive gene will be created during
     /// gene mutation if possible.
     pub recursion_chance: f32,
@@ -62,15 +63,17 @@ pub struct GeneticConfig {
     pub common_weight_factor: f32,
 }
 
-impl Default for GeneticConfig {
-    fn default() -> GeneticConfig {
+impl GeneticConfig {
+    /// Returns a "zero-valued" default configuration.
+    /// All values are 0, empty, or in the case of
+    /// `NonZeroUsize`s, 1.
+    pub fn zero() -> GeneticConfig {
         GeneticConfig {
             input_count: NonZeroUsize::new(1).unwrap(),
             output_count: NonZeroUsize::new(1).unwrap(),
             activation_types: vec![],
             output_activation_types: vec![],
-            mutate_only_chance: 0.0,
-            mate_only_chance: 0.0,
+            child_mutation_chance: 0.0,
             mate_by_averaging_chance: 0.0,
             suppression_reset_chance: 0.0,
             initial_expression_chance: 0.0,
@@ -78,9 +81,11 @@ impl Default for GeneticConfig {
             weight_reset_chance: 0.0,
             weight_nudge_chance: 0.0,
             weight_mutation_power: 0.0,
-            node_mutation_chance: 0.0,
-            gene_mutation_chance: 0.0,
-            max_gene_mutation_attempts: 0,
+            node_addition_mutation_chance: 0.0,
+            gene_addition_mutation_chance: 0.0,
+            node_deletion_mutation_chance: 0.0,
+            gene_deletion_mutation_chance: 0.0,
+            max_gene_addition_mutation_attempts: 0,
             recursion_chance: 0.0,
             excess_gene_factor: 0.0,
             disjoint_gene_factor: 0.0,

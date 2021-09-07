@@ -18,6 +18,9 @@ pub struct PopulationConfig {
     /// instead of being directly assigned to its
     /// parent's species.
     pub adoption_rate: f32,
+    /// Chance that offspring will be the result
+    /// of sexual reproduction (as opposed to asexual).
+    pub sexual_reproduction_chance: f32,
     /// Chance that genomes from different species
     /// will be selected to mate.
     pub interspecies_mating_chance: f32,

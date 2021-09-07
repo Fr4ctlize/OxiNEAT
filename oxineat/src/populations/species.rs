@@ -59,7 +59,7 @@ impl Species {
     }
 
     pub fn genetic_distance(&self, other: &Genome, config: &GeneticConfig) -> f32 {
-        self.representative.genetic_distance_to(other, config)
+        Genome::genetic_distance(&self.representative, other, config)
     }
 
     /// Adds a genome to the species.

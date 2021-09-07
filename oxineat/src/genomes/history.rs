@@ -16,7 +16,7 @@ use std::collections::hash_map::{Entry, HashMap};
 /// number is recorded.
 ///
 /// For node innovations the split gene is used to identify
-/// identical mutatinos, and the innovation numbers for the
+/// identical mutations, and the innovation numbers for the
 /// corresponding input gene, new node, and output gene are
 /// recorded, in that order.
 #[derive(Debug, Clone)]

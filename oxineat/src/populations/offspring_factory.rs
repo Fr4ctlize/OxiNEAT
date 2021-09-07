@@ -86,11 +86,15 @@ impl<'a> OffspringFactory<'a> {
         let mut rng = rand::thread_rng();
         // Mate parents
         for _ in 0..offspring {
-            let parent1 = eligible_parents
+            let parent1 = *eligible_parents
                 .choose(&mut rng)
                 .unwrap_or_else(|| panic!("no eligible parents in species {:?}", species.id()));
             let (parent2_species, parent2) =
-                Self::choose_second_parent(species, self.species, self.population_config);
+                if rng.gen::<f32>() < self.population_config.sexual_reproduction_chance {
+                    Self::choose_second_parent(species, self.species, self.population_config)
+                } else {
+                    (species.id(), parent1)
+                };
             let child_species = if rng.gen::<bool>() {
                 species.id()
             } else {
@@ -99,7 +103,12 @@ impl<'a> OffspringFactory<'a> {
             species_offspring
                 .get_mut(&child_species)
                 .unwrap()
-                .push(parent1.mate_with(parent2, &mut self.history, self.genetic_config));
+                .push(Genome::mate(
+                    parent1,
+                    parent2,
+                    &mut self.history,
+                    self.genetic_config,
+                ));
         }
     }
 

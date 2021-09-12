@@ -36,7 +36,7 @@ pub struct Genome {
 
 impl Genome {
     /// Create a new genome with the specified configuration.
-    /// 
+    ///
     /// Initially generated genes are given the innovation number
     /// `o + i * output_count`, where `i` is the innovation number
     /// of their input node and `o` is that of their output node.
@@ -68,7 +68,7 @@ impl Genome {
     ///
     /// // All genes should have weights within the established bound.
     /// assert!(genome.genes().all(|g| g.weight().abs() <= config.weight_bound));
-    /// 
+    ///
     /// // All genes should have innovation numbers in the range (0..6)
     /// assert!(genome.genes().all(|g| (0..3 * 2).contains(&g.innovation())));
     /// ```
@@ -150,8 +150,9 @@ impl Genome {
     /// # Panics
     ///
     /// This function will panic if a gene with the same
-    /// `gene_id` already existed in the genome, or if either `input_id`
-    /// or `output_id` do not correspond to nodes present in the genome.
+    /// `gene_id` already existed in the genome, if either `input_id`
+    /// or `output_id` do not correspond to nodes present in the genome,
+    /// or if `output_id` corresponds to a sensor node. 
     ///
     /// # Example
     /// ```
@@ -179,11 +180,12 @@ impl Genome {
     /// assert_eq!(inserted_gene.output(), 4);
     /// assert_eq!(inserted_gene.weight(), 2.5);
     ///
-    /// // Make a cycle (gene 42 goes 2 -> 4, gene 43 goes 4 -> 2).
-    /// genome.add_gene(43, 4, 2, -3.0);
+    /// // Make a cycle (gene 43 goes 3 -> 4, gene 44 goes 4 -> 3).
+    /// genome.add_gene(43, 3, 4, -3.0);
+    /// genome.add_gene(44, 4, 3, 1.0);
     ///
     /// // Recursive gene.
-    /// genome.add_gene(44, 4, 4, -1.0);
+    /// genome.add_gene(45, 4, 4, -1.0);
     /// ```
     pub fn add_gene(
         &mut self,
@@ -241,6 +243,8 @@ impl Genome {
             Err(NonexistantEndpoints(input_id, output_id))
         } else if self.node_pairings.contains(&(input_id, output_id)) {
             Err(DuplicateGeneWithEndpoints(gene_id, (input_id, output_id)))
+        } else if self.nodes[&output_id].node_type() == NodeType::Sensor {
+            Err(SensorEndpoint(output_id))
         } else {
             Ok(())
         }
@@ -938,7 +942,7 @@ impl Genome {
     /// ```
     /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome, History};
     /// use std::num::NonZeroUsize;
-    /// 
+    ///
     /// // Completely arbitrary quantities.
     /// const EXCESS_FACTOR: f32 = 1.5;
     /// const DISJOINT_FACTOR: f32 = 0.5;
@@ -1037,25 +1041,25 @@ impl Genome {
     ///
     /// # Notes
     /// No ordering is guaranteed.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomes::{GeneticConfig, Genome};
     /// use std::num::NonZeroUsize;
-    /// 
+    ///
     /// let config = GeneticConfig {
     ///     input_count: NonZeroUsize::new(3).unwrap(),
     ///     output_count: NonZeroUsize::new(2).unwrap(),
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// };
-    /// 
+    ///
     /// // Initial gene innovations with 3 + 2 I/O
     /// let innovations = (0..3 * 2);
-    /// 
+    ///
     /// let genome = Genome::new(&config);
     /// let mut genes = genome.genes();
-    /// 
+    ///
     /// assert!(genes.all(|g| innovations.contains(&g.innovation())));
     /// ```
     pub fn genes(&self) -> impl Iterator<Item = &Gene> {
@@ -1066,25 +1070,25 @@ impl Genome {
     ///
     /// # Notes
     /// No ordering is guaranteed.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomes::{GeneticConfig, Genome};
     /// use std::num::NonZeroUsize;
-    /// 
+    ///
     /// let config = GeneticConfig {
     ///     input_count: NonZeroUsize::new(3).unwrap(),
     ///     output_count: NonZeroUsize::new(2).unwrap(),
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// };
-    /// 
+    ///
     /// // Initial gene innovations with 3 + 2 I/O
     /// let innovations = (0..3 + 2);
-    /// 
+    ///
     /// let genome = Genome::new(&config);
     /// let mut nodes = genome.nodes();
-    /// 
+    ///
     /// assert!(nodes.all(|n| innovations.contains(&n.innovation())));
     /// ```
     pub fn nodes(&self) -> impl Iterator<Item = &Node> {
@@ -1093,19 +1097,19 @@ impl Genome {
 
     /// Sets the genome's fitness to the value passed.
     /// Fitness should be a positive quantity.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomes::{GeneticConfig, Genome};
-    /// 
+    ///
     /// let mut genome = Genome::new(&GeneticConfig::zero());
-    /// 
+    ///
     /// assert_eq!(genome.fitness(), 0.0);
-    /// 
+    ///
     /// genome.set_fitness(32.0);
-    /// 
+    ///
     /// assert_eq!(genome.fitness(), 32.0);
-    /// 
+    ///
     /// // Will panic:
     /// // genome.set_fitness(-1.0);
     /// ```
@@ -1115,13 +1119,13 @@ impl Genome {
     }
 
     /// Returns a the genome's current fitness.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomes::{GeneticConfig, Genome};
-    /// 
+    ///
     /// let genome = Genome::new(&GeneticConfig::zero());
-    /// 
+    ///
     /// assert_eq!(genome.fitness(), 0.0);
     /// ```
     pub fn fitness(&self) -> f32 {

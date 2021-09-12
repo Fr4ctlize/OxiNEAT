@@ -8,6 +8,7 @@ pub(crate) enum GeneViabilityError {
     DuplicateGeneID(Innovation),
     NonexistantEndpoints(Innovation, Innovation),
     DuplicateGeneWithEndpoints(Innovation, (Innovation, Innovation)),
+    SensorEndpoint(Innovation),
 }
 
 #[derive(Debug)]
@@ -39,6 +40,11 @@ impl fmt::Display for GeneViabilityError {
                 f,
                 "gene insertion with endpoints {} -> {} and id {} shadows gene with same endpoints",
                 input, output, duplicate_id,
+            ),
+            Self::SensorEndpoint(id) => write!(
+                f,
+                "gene insertion with sensor node as endpoint with id {}",
+                id
             ),
         }
     }

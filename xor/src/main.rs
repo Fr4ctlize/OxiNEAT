@@ -1,5 +1,5 @@
 use oxineat::genomes::{ActivationType, Genome};
-use oxineat::networks::Network;
+use oxineat::networks::FunctionApproximatorNetwork;
 use oxineat::populations::{Population, Stats};
 // use neat::populations::{EvolutionLogger, ReportingLevel};
 use oxineat::{GeneticConfig, PopulationConfig};
@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 const ERROR_MARGIN: f32 = 0.3;
 
 fn evaluate_xor(genome: &Genome) -> f32 {
-    let mut network = Network::from(genome);
+    let mut network = FunctionApproximatorNetwork::new::<1>(genome);
 
     let values = [
         ([1.0, 0.0, 0.0], 0.0),
@@ -23,12 +23,7 @@ fn evaluate_xor(genome: &Genome) -> f32 {
 
     let mut errors = [0.0, 0.0, 0.0, 0.0];
     for (i, (input, output)) in values.iter().enumerate() {
-        network.clear_state();
-        for _ in 0..3 {
-            network.set_inputs(input);
-            network.activate();
-        }
-        errors[i] = (network.outputs()[0] - output).abs();
+        errors[i] = (network.get_value(input)[0] - output).abs();
         if errors[i] < ERROR_MARGIN {
             errors[i] = 0.0;
         }
@@ -43,8 +38,7 @@ fn main() {
         output_count: NonZeroUsize::new(1).unwrap(),
         activation_types: vec![ActivationType::Sigmoid],
         output_activation_types: vec![ActivationType::Sigmoid],
-        mutate_only_chance: 0.25,
-        mate_only_chance: 0.2,
+        child_mutation_chance: 0.65,
         mate_by_averaging_chance: 0.4,
         suppression_reset_chance: 1.0,
         initial_expression_chance: 1.0,
@@ -52,21 +46,22 @@ fn main() {
         weight_reset_chance: 0.2,
         weight_nudge_chance: 0.9,
         weight_mutation_power: 2.5,
-        node_mutation_chance: 0.03,
-        gene_mutation_chance: 0.05,
-        max_gene_mutation_attempts: 20,
+        node_addition_mutation_chance: 0.03,
+        gene_addition_mutation_chance: 0.05,
+        max_gene_addition_mutation_attempts: 20,
         recursion_chance: 0.0,
         excess_gene_factor: 1.0,
         disjoint_gene_factor: 1.0,
         common_weight_factor: 0.4,
+        ..GeneticConfig::zero()
     };
-
     let population_config = PopulationConfig {
         population_size: NonZeroUsize::new(150).unwrap(),
         distance_threshold: 3.0,
         elitism: 1,
         survival_threshold: 0.2,
         adoption_rate: 1.0,
+        sexual_reproduction_chance: 0.6,
         interspecies_mating_chance: 0.001,
         stagnation_threshold: NonZeroUsize::new(15).unwrap(),
         stagnation_penalty: 1.0,
@@ -91,7 +86,7 @@ fn main() {
             if let Err(e) = population.evolve() {
                 eprintln!("{}", e);
                 // population.reset()
-                break
+                break;
             }
         }
         if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {

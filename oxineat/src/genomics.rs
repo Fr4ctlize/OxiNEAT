@@ -38,14 +38,14 @@ impl Genome {
     /// Create a new genome with the specified configuration.
     ///
     /// Initially generated genes are given the innovation number
-    /// `o + i * output_count`, where `i` is the innovation number
+    /// `o + i ⨯ output_count`, where `i` is the innovation number
     /// of their input node and `o` is that of their output node.
     /// Thus, genes created through mutation start at innovation
-    /// number `input_count * output_count`.
+    /// number `input_count ⨯ output_count`.
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome, NodeType};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, NodeType};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -154,9 +154,9 @@ impl Genome {
     /// or `output_id` do not correspond to nodes present in the genome,
     /// or if `output_id` corresponds to a sensor node. 
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -238,7 +238,7 @@ impl Genome {
     ) -> Result<(), GeneViabilityError> {
         use GeneViabilityError::*;
         if self.genes.contains_key(&gene_id) {
-            Err(DuplicateGeneID(gene_id))
+            Err(DuplicateGeneID(gene_id, input_id, output_id))
         } else if !(self.nodes.contains_key(&input_id) && self.nodes.contains_key(&output_id)) {
             Err(NonexistantEndpoints(input_id, output_id))
         } else if self.node_pairings.contains(&(input_id, output_id)) {
@@ -258,9 +258,9 @@ impl Genome {
     /// This function panics if a node of the
     /// same ID already existed in the genome.
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome, NodeType,};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, NodeType,};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -326,7 +326,7 @@ impl Genome {
     /// The weight is set to a random value in the range
     /// `[-weight_bound, weight_bound]`.
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome};
+    /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -357,7 +357,7 @@ impl Genome {
     /// A random value from the range `[-weight_mutation_power, weight_mutation_power]`
     /// is added to the weight, which is then clamped to `[-weight_bound, weight_bound]`.
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome};
+    /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -410,11 +410,11 @@ impl Genome {
     /// Returns an error if no viable pair of nodes
     /// exists or [too many] attempts have failed.
     ///
-    /// [too many]: crate::genomes::GeneticConfig::max_gene_mutation_attempts
+    /// [too many]: crate::genomics::GeneticConfig::max_gene_mutation_attempts
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome, History};
+    /// use oxineat::genomics::{GeneticConfig, Genome, History};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -431,12 +431,12 @@ impl Genome {
     /// // The genome is initially empty.
     /// assert_eq!(genome.genes().count(), 0);
     ///
-    /// genome.gene_addition_mutation(&mut History::new(&config), &config).unwrap();
+    /// genome.mutate_add_gene(&mut History::new(&config), &config).unwrap();
     ///
     /// // The genome now has a new gene.
     /// assert_eq!(genome.genes().count(), 1);
     /// ```
-    pub fn gene_addition_mutation(
+    pub fn mutate_add_gene(
         &mut self,
         history: &mut History,
         config: &GeneticConfig,
@@ -557,9 +557,9 @@ impl Genome {
     /// This function returns an error if there are no genes in the genome
     /// that could be split.
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome, History, NodeType};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History, NodeType};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -581,7 +581,7 @@ impl Genome {
     /// let prev_gene = genome.genes().next().unwrap().clone();
     ///
     /// let (new_input_gene, new_node, new_output_gene) =
-    ///     genome.node_addition_mutation(&mut History::new(&config), &config).unwrap();
+    ///     genome.mutate_add_node(&mut History::new(&config), &config).unwrap();
     ///
     /// assert_eq!(new_input_gene.output(), new_node.innovation());
     /// assert_eq!(new_input_gene.weight(), 1.0);
@@ -602,7 +602,7 @@ impl Genome {
     ///     .all(|g| g.suppressed())
     /// )
     /// ```
-    pub fn node_addition_mutation(
+    pub fn mutate_add_node(
         &mut self,
         history: &mut History,
         config: &GeneticConfig,
@@ -612,8 +612,8 @@ impl Genome {
             None => return Err(NodeMutationError::EmptyGenome.into()),
         };
 
-        let mutation = self.get_node_mutation_innovation_triplet(gene_to_split, history);
-        Ok(self.add_node_mutation(gene_to_split, mutation, history, config))
+        let (mutation, duplicate) = self.get_node_mutation_innovation_triplet(gene_to_split, history);
+        Ok(self.add_node_mutation(gene_to_split, mutation, duplicate, history, config))
     }
 
     fn choose_random_gene(&self) -> Option<Innovation> {
@@ -625,14 +625,14 @@ impl Genome {
         &mut self,
         gene_to_split: Innovation,
         history: &mut History,
-    ) -> (Innovation, Innovation, Innovation) {
+    ) -> ((Innovation, Innovation, Innovation), bool) {
         let (input_gene, new_node, output_gene) =
             history.next_node_innovation(gene_to_split, false);
 
         if self.nodes.contains_key(&new_node) {
-            history.next_node_innovation(gene_to_split, true)
+            (history.next_node_innovation(gene_to_split, true), true)
         } else {
-            (input_gene, new_node, output_gene)
+            ((input_gene, new_node, output_gene), false)
         }
     }
 
@@ -640,6 +640,7 @@ impl Genome {
         &mut self,
         gene_to_split: Innovation,
         mutation: (Innovation, Innovation, Innovation),
+        duplicate: bool,
         history: &mut History,
         config: &GeneticConfig,
     ) -> (&Gene, &Node, &Gene) {
@@ -652,7 +653,7 @@ impl Genome {
         // should have checked for this already.
         debug_assert!(!self.nodes.contains_key(&new_node));
 
-        history.add_node_innovation(gene_to_split, self.nodes.contains_key(&new_node));
+        history.add_node_innovation(gene_to_split, duplicate);
 
         self.suppress_gene_unchecked(gene_to_split);
         self.add_node_unchecked(
@@ -660,7 +661,7 @@ impl Genome {
             *config
                 .activation_types
                 .choose(&mut rand::thread_rng())
-                .unwrap(),
+                .unwrap_or(&ActivationType::Sigmoid),
         );
         self.add_gene_unchecked(input_gene, input_node, new_node, 1.0);
         self.add_gene_unchecked(
@@ -686,9 +687,9 @@ impl Genome {
     /// Returns `None` if the network is empty, or `Some(gene)`
     /// otherwise.
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{Genome, GeneticConfig};
+    /// use oxineat::genomics::{Genome, GeneticConfig};
     ///
     /// let config = GeneticConfig {
     ///     initial_expression_chance: 1.0,
@@ -699,11 +700,11 @@ impl Genome {
     ///
     /// let initial_gene_count = genome.genes().count();
     ///
-    /// genome.gene_deletion_mutation();
+    /// genome.mutate_delete_gene();
     ///
     /// assert_eq!(genome.genes().count(), initial_gene_count - 1);
     /// ```
-    pub fn gene_deletion_mutation(&mut self) -> Option<Gene> {
+    pub fn mutate_delete_gene(&mut self) -> Option<Gene> {
         self.genes
             .keys()
             .copied()
@@ -717,9 +718,9 @@ impl Genome {
     /// Returns `None` if the network is empty, or
     /// `Some((node, incident_genes))` otherwise.
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome};
     ///
     /// let config = GeneticConfig {
     ///     node_deletion_mutation_chance: 1.0,
@@ -733,7 +734,7 @@ impl Genome {
     /// let initial_node_count = genome.nodes().count();
     /// let initial_gene_count = genome.genes().count();
     ///
-    /// let (removed_node, removed_genes) = genome.node_deletion_mutation().unwrap();
+    /// let (removed_node, removed_genes) = genome.mutate_delete_node().unwrap();
     ///
     /// assert_eq!(removed_node.innovation(), 42);
     /// assert_eq!(removed_genes[0].innovation(), 16);
@@ -742,7 +743,7 @@ impl Genome {
     /// assert_eq!(genome.nodes().count(), initial_node_count - 1);
     /// assert_eq!(genome.genes().count(), initial_gene_count - 2);
     /// ```
-    pub fn node_deletion_mutation(&mut self) -> Option<(Node, Vec<Gene>)> {
+    pub fn mutate_delete_node(&mut self) -> Option<(Node, Vec<Gene>)> {
         self.nodes
             .values()
             .filter_map(|n| match n.node_type() {
@@ -770,13 +771,13 @@ impl Genome {
     /// undergo mutations. Mutation chances are defined by their
     /// corresponding entries in `config`.
     ///w
-    /// [`config.sexual_reproduction_chance`]: crate::genomes::GeneticConfig::sexual_reproduction_chance
-    /// [`config.child_mutation_chance`]: crate::genomes::GeneticConfig::child_mutation_chance
+    /// [`config.sexual_reproduction_chance`]: crate::genomics::GeneticConfig::sexual_reproduction_chance
+    /// [`config.child_mutation_chance`]: crate::genomics::GeneticConfig::child_mutation_chance
     ///
     /// # Examples
     /// ### Asexual reproduction, no mutations
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome, History};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -799,7 +800,7 @@ impl Genome {
     ///
     /// ### Sexual reproduction, with mutations
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome, History};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -861,17 +862,17 @@ impl Genome {
     fn mutate_all(&mut self, history: &mut History, config: &GeneticConfig) {
         let mut rng = rand::thread_rng();
         if rng.gen::<f32>() < config.node_deletion_mutation_chance {
-            let _ = self.node_deletion_mutation();
+            let _ = self.mutate_delete_node();
         }
         if rng.gen::<f32>() < config.gene_deletion_mutation_chance {
-            let _ = self.gene_deletion_mutation();
+            let _ = self.mutate_delete_gene();
         }
         self.mutate_weights(config);
         if rng.gen::<f32>() < config.node_addition_mutation_chance {
-            let _ = self.node_addition_mutation(history, config);
+            let _ = self.mutate_add_node(history, config);
         }
         if rng.gen::<f32>() < config.gene_addition_mutation_chance {
-            let _ = self.gene_addition_mutation(history, config);
+            let _ = self.mutate_add_gene(history, config);
         }
     }
 
@@ -938,9 +939,9 @@ impl Genome {
     /// Calculates the _genetic distance_ between `self` and `other`,
     /// weighting node and weight differences as specified in `config`.
     ///
-    /// # Example
+    /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome, History};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History};
     /// use std::num::NonZeroUsize;
     ///
     /// // Completely arbitrary quantities.
@@ -1044,7 +1045,7 @@ impl Genome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome};
+    /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -1054,13 +1055,11 @@ impl Genome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// // Initial gene innovations with 3 + 2 I/O
-    /// let innovations = (0..3 * 2);
-    ///
     /// let genome = Genome::new(&config);
-    /// let mut genes = genome.genes();
-    ///
-    /// assert!(genes.all(|g| innovations.contains(&g.innovation())));
+    /// 
+    /// for gene in genome.genes() {
+    ///     println!("gene: {}", gene);
+    /// }
     /// ```
     pub fn genes(&self) -> impl Iterator<Item = &Gene> {
         self.genes.values()
@@ -1073,7 +1072,7 @@ impl Genome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome};
+    /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -1083,13 +1082,11 @@ impl Genome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// // Initial gene innovations with 3 + 2 I/O
-    /// let innovations = (0..3 + 2);
-    ///
     /// let genome = Genome::new(&config);
-    /// let mut nodes = genome.nodes();
     ///
-    /// assert!(nodes.all(|n| innovations.contains(&n.innovation())));
+    /// for node in genome.nodes() {
+    ///     println!("node: {}", node);
+    /// }
     /// ```
     pub fn nodes(&self) -> impl Iterator<Item = &Node> {
         self.nodes.values()
@@ -1100,7 +1097,7 @@ impl Genome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome};
+    /// use oxineat::genomics::{GeneticConfig, Genome};
     ///
     /// let mut genome = Genome::new(&GeneticConfig::zero());
     ///
@@ -1122,7 +1119,7 @@ impl Genome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome};
+    /// use oxineat::genomics::{GeneticConfig, Genome};
     ///
     /// let genome = Genome::new(&GeneticConfig::zero());
     ///
@@ -1438,7 +1435,7 @@ mod tests {
         let mut genome = Genome::new(&config);
         genome.add_node(2, ActivationType::Sigmoid);
         let gene = genome
-            .gene_addition_mutation(&mut history, &config)
+            .mutate_add_gene(&mut history, &config)
             .unwrap();
 
         assert_eq!(
@@ -1466,7 +1463,7 @@ mod tests {
         genome.add_gene(43, 50, 1, 2.0);
         genome.add_gene(44, 1, 50, 2.0);
         let gene = genome
-            .gene_addition_mutation(&mut history, &config)
+            .mutate_add_gene(&mut history, &config)
             .unwrap();
 
         assert_eq!(gene.input(), gene.output());
@@ -1490,7 +1487,7 @@ mod tests {
         genome.add_gene(42, 1, 1, 5.0);
 
         genome
-            .gene_addition_mutation(&mut history, &config)
+            .mutate_add_gene(&mut history, &config)
             .unwrap();
     }
 
@@ -1505,7 +1502,7 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         let (input, node, output) = genome
-            .node_addition_mutation(&mut history, &config)
+            .mutate_add_node(&mut history, &config)
             .unwrap();
 
         assert_eq!(input.innovation(), *node.input_genes().next().unwrap());
@@ -1528,7 +1525,7 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         genome
-            .node_addition_mutation(&mut history, &config)
+            .mutate_add_node(&mut history, &config)
             .unwrap();
     }
 
@@ -1543,7 +1540,7 @@ mod tests {
         };
         let mut genome = Genome::new(&config);
         let initial_gene_count = genome.genes().count();
-        genome.gene_deletion_mutation();
+        genome.mutate_delete_gene();
         assert_eq!(genome.genes().count(), initial_gene_count - 1);
     }
 
@@ -1559,7 +1556,7 @@ mod tests {
         genome.add_gene(17, 42, 1, 1.0);
         let initial_node_count = genome.nodes().count();
         let initial_gene_count = genome.genes().count();
-        genome.node_deletion_mutation();
+        genome.mutate_delete_node();
         assert_eq!(genome.nodes().count(), initial_node_count - 1);
         assert_eq!(genome.genes().count(), initial_gene_count - 2);
     }

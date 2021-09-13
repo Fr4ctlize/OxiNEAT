@@ -45,7 +45,7 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// ```
@@ -68,7 +68,7 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// 
@@ -95,7 +95,7 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// 
@@ -117,7 +117,7 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// 
@@ -131,16 +131,16 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// node.add_input_gene(0);
     /// node.add_input_gene(1);
     /// node.add_input_gene(2);
     /// 
-    /// assert!(node.input_genes().find(|id| **id == 0).is_some());
-    /// assert!(node.input_genes().find(|id| **id == 1).is_some());
-    /// assert!(node.input_genes().find(|id| **id == 2).is_some());
+    /// for gene in node.input_genes() {
+    ///     println!("Node {} has an input gene with id {}", node.innovation(), *gene);
+    /// }
     /// ```
     pub fn input_genes(&self) -> impl Iterator<Item = &Innovation> {
         self.inputs.iter()
@@ -150,16 +150,16 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// node.add_output_gene(0);
     /// node.add_output_gene(1);
     /// node.add_output_gene(2);
     /// 
-    /// assert!(node.output_genes().find(|id| **id == 0).is_some());
-    /// assert!(node.output_genes().find(|id| **id == 1).is_some());
-    /// assert!(node.output_genes().find(|id| **id == 2).is_some());
+    /// for gene in node.output_genes() {
+    ///     println!("Node {} has an output gene with id {}", node.innovation(), *gene);
+    /// }
     /// ```
     pub fn output_genes(&self) -> impl Iterator<Item = &Innovation> {
         self.outputs.iter()
@@ -169,7 +169,7 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// 
@@ -183,7 +183,7 @@ impl Node {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Node, NodeType, ActivationType};
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
     /// 
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// 

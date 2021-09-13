@@ -5,7 +5,7 @@ use crate::Innovation;
 
 #[derive(Debug)]
 pub(crate) enum GeneViabilityError {
-    DuplicateGeneID(Innovation),
+    DuplicateGeneID(Innovation, Innovation, Innovation),
     NonexistantEndpoints(Innovation, Innovation),
     DuplicateGeneWithEndpoints(Innovation, (Innovation, Innovation)),
     SensorEndpoint(Innovation),
@@ -30,7 +30,11 @@ pub(crate) enum NodeMutationError {
 impl fmt::Display for GeneViabilityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::DuplicateGeneID(id) => write!(f, "duplicate gene insertion with id {}", id),
+            Self::DuplicateGeneID(id, input, output) => write!(
+                f,
+                "duplicate gene insertion with id {} between endpoints {} -> {}",
+                id, input, output
+            ),
             Self::NonexistantEndpoints(input, output) => write!(
                 f,
                 "gene insertion between nonexistant endpoint(s) {} -> {}",

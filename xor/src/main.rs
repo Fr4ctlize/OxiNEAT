@@ -1,8 +1,7 @@
-use oxineat::genomes::{ActivationType, Genome};
+use oxineat::genomics::{ActivationType, Genome, GeneticConfig};
 use oxineat::networks::FunctionApproximatorNetwork;
-use oxineat::populations::{Population, Stats};
+use oxineat::populations::{Population, PopulationConfig, Stats};
 // use neat::populations::{EvolutionLogger, ReportingLevel};
-use oxineat::{GeneticConfig, PopulationConfig};
 
 use std::num::NonZeroUsize;
 

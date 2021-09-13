@@ -16,11 +16,9 @@
 //! 
 //! ```
 //! use oxineat::{
-//!     PopulationConfig,
-//!     GeneticConfig,
-//!     genomes::{Genome, ActivationType},
+//!     genomics::{ActivationType, GeneticConfig, Genome},
 //!     networks::FunctionApproximatorNetwork,
-//!     populations::Population,
+//!     populations::{Population, PopulationConfig},
 //! };
 //! use std::num::NonZeroUsize;
 //! 
@@ -99,12 +97,9 @@
 //! }
 //! ```
 
-pub mod genomes;
+pub mod genomics;
 pub mod networks;
 pub mod populations;
-
-pub use genomes::GeneticConfig;
-pub use populations::PopulationConfig;
 
 /// Identifier type used to designate historically
 /// identical mutations for the purposes of

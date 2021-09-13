@@ -1,5 +1,5 @@
 use super::RealTimeNetwork;
-use crate::genomes::Genome;
+use crate::genomics::Genome;
 
 /// A neural network best suited for function
 /// approximation.
@@ -21,7 +21,7 @@ impl FunctionApproximatorNetwork {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{GeneticConfig, Genome};
+    /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use oxineat::networks::FunctionApproximatorNetwork;
     ///
     /// let genome = Genome::new(&GeneticConfig::zero());
@@ -79,7 +79,7 @@ impl FunctionApproximatorNetwork {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome};
+    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome};
     /// use oxineat::networks::FunctionApproximatorNetwork;
     /// 
     /// fn sigmoid(x: f32) -> f32 {
@@ -110,7 +110,7 @@ impl FunctionApproximatorNetwork {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::genomes::{ActivationType, GeneticConfig};
+    use crate::genomics::{ActivationType, GeneticConfig};
 
     fn sigmoid(x: f32) -> f32 {
         1.0 / (1.0 + (-4.9 * x).exp())

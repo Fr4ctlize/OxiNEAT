@@ -14,7 +14,7 @@ pub use log::*;
 use offspring_factory::OffspringFactory;
 pub use species::{Species, SpeciesID};
 
-use crate::genomes::{GeneticConfig, Genome, History};
+use crate::genomics::{GeneticConfig, Genome, History};
 
 use std::collections::HashMap;
 
@@ -94,7 +94,7 @@ impl Population {
                 self.respeciate_all();
                 self.remove_extinct_species();
                 self.generation += 1;
-                self.history.clear();
+                // self.history.clear();
                 Ok(())
             }
             Err(e) => Err(e.into()),

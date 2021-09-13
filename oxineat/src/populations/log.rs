@@ -1,5 +1,5 @@
 use super::{Population, SpeciesID};
-use crate::genomes::Genome;
+use crate::genomics::Genome;
 use crate::Innovation;
 
 use std::fmt;
@@ -162,8 +162,8 @@ impl EvolutionLogger {
             fitness: Stats::from(&mut stats.iter().map(|(_, _, f)| *f)),
             gene_count: Stats::from(&mut stats.iter().map(|(g, _, _)| *g)),
             node_count: Stats::from(&mut stats.iter().map(|(_, n, _)| *n)),
-            max_gene_innovation: population.history().gene_innovation_count(),
-            max_node_innovation: population.history().node_innovation_count(),
+            max_gene_innovation: population.history().max_gene_innovation(),
+            max_node_innovation: population.history().max_node_innovation(),
         })
     }
 

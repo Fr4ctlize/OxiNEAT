@@ -1,4 +1,4 @@
-use crate::genomes::GeneticConfig;
+use crate::genomics::GeneticConfig;
 use crate::Innovation;
 
 use std::fmt;
@@ -23,7 +23,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// ```
@@ -46,11 +46,11 @@ impl Gene {
     /// Randomizes the gene's weight. Uses a uniform
     /// distribution over the range ±[`weight_mutation_power`].
     ///
-    /// [`weight_mutation_power`]: crate::genomes::GeneticConfig::weight_mutation_power
+    /// [`weight_mutation_power`]: crate::genomics::GeneticConfig::weight_mutation_power
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Gene, GeneticConfig};
+    /// use oxineat::genomics::{Gene, GeneticConfig};
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -78,12 +78,12 @@ impl Gene {
     /// the weight is set to the maximum magnitude with the same
     /// sign.
     ///
-    /// [`weight_mutation_power`]: crate::genomes::GeneticConfig::weight_mutation_power
-    /// [`weight_bound`]: crate::genomes::GeneticConfig::weight_bound
+    /// [`weight_mutation_power`]: crate::genomics::GeneticConfig::weight_mutation_power
+    /// [`weight_bound`]: crate::genomics::GeneticConfig::weight_bound
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{Gene, GeneticConfig};
+    /// use oxineat::genomics::{Gene, GeneticConfig};
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 3.0);
     /// 
@@ -113,7 +113,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -127,7 +127,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -141,7 +141,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -155,7 +155,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -169,7 +169,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -187,7 +187,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -201,7 +201,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::Gene;
+    /// use oxineat::genomics::Gene;
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
     /// 

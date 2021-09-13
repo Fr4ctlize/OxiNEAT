@@ -1,4 +1,4 @@
-use crate::genomes::ActivationType;
+use crate::genomics::ActivationType;
 
 use std::num::NonZeroUsize;
 
@@ -11,13 +11,17 @@ pub struct GeneticConfig {
     /// Number of outputs in a genome.
     pub output_count: NonZeroUsize,
     /// Possible activation types for nodes in a genome.
+    /// If an empty vector is given, nodes will default
+    /// to [`Sigmoid`].
+    /// 
+    /// [`Sigmoid`]: crate::genomics::ActivationType
     pub activation_types: Vec<ActivationType>,
     /// Activation types of output nodes in a genome.
     /// If fewer than [`output_count`] are specified,
     /// the default is [`Sigmoid`].
     /// 
     /// [`output_count`]: GeneticConfig::output_count
-    /// [`Sigmoid`]: crate::genomes::ActivationType
+    /// [`Sigmoid`]: crate::genomics::ActivationType
     pub output_activation_types: Vec<ActivationType>,
     /// Chance of child mutation during mating.
     pub child_mutation_chance: f32,

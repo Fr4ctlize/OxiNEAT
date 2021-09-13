@@ -1,5 +1,5 @@
 use super::PopulationConfig;
-use crate::genomes::{GeneticConfig, Genome};
+use crate::genomics::{GeneticConfig, Genome};
 
 /// Species identifier. Specifies
 /// the generation in which the species

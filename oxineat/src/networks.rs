@@ -15,14 +15,14 @@ mod function_approximator;
 
 pub use function_approximator::FunctionApproximatorNetwork;
 
-use crate::genomes::{ActivationType, Genome, NodeType};
+use crate::genomics::{ActivationType, Genome, NodeType};
 use crate::Innovation;
 use connection::Connection;
 
 use std::collections::HashMap;
 use std::fmt;
 
-/// A arbitrarily-structured neural network.
+/// An arbitrarily-structured neural network.
 #[derive(Clone, Debug)]
 pub struct RealTimeNetwork {
     input_count: usize,
@@ -39,8 +39,10 @@ impl RealTimeNetwork {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome};
-    /// use oxineat::networks::RealTimeNetwork;
+    /// use oxineat::{
+    ///     genomics::{ActivationType, GeneticConfig, Genome},
+    ///     networks::RealTimeNetwork,
+    /// };
     /// use std::num::NonZeroUsize;
     ///
     /// let genome = Genome::new(&GeneticConfig {
@@ -110,8 +112,10 @@ impl RealTimeNetwork {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomes::{ActivationType, GeneticConfig, Genome};
-    /// use oxineat::networks::RealTimeNetwork;
+    /// use oxineat::{
+    ///     genomics::{ActivationType, GeneticConfig, Genome},
+    ///     networks::RealTimeNetwork,
+    /// };
     /// use std::num::NonZeroUsize;
     ///
     /// let mut genome = Genome::new(&GeneticConfig {
@@ -160,6 +164,28 @@ impl RealTimeNetwork {
     }
 
     /// Clears the activation state of all nodes.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::{
+    ///     genomics::{GeneticConfig, Genome},
+    ///     networks::RealTimeNetwork,
+    /// };
+    /// 
+    /// let genome = Genome::new(&GeneticConfig{
+    ///     initial_expression_chance: 1.0,
+    ///     ..GeneticConfig::zero()
+    /// });
+    /// 
+    /// let mut network = RealTimeNetwork::new(&genome);
+    /// network.set_inputs(&[1.0]);
+    /// network.activate();
+    /// assert_ne!(network.outputs()[0], 0.0);
+    /// 
+    /// network.clear_state();
+    /// 
+    /// assert_eq!(network.outputs()[0], 0.0);
+    /// ```
     pub fn clear_state(&mut self) {
         for (input_sum, activation) in self
             .input_sums
@@ -177,12 +203,48 @@ impl RealTimeNetwork {
     /// # Errors
     /// This function panics if the length of the passed
     /// slice is not equal to the number of inputs in the network.
+    /// 
+    /// /// # Examples
+    /// ```
+    /// use oxineat::{
+    ///     genomics::{GeneticConfig, Genome},
+    ///     networks::RealTimeNetwork,
+    /// };
+    /// 
+    /// let genome = Genome::new(&GeneticConfig{
+    ///     initial_expression_chance: 1.0,
+    ///     ..GeneticConfig::zero()
+    /// });
+    /// 
+    /// let mut network = RealTimeNetwork::new(&genome);
+    /// network.set_inputs(&[1.0]);
+    /// ```
     pub fn set_inputs(&mut self, values: &[f32]) {
         self.activation_levels[..self.input_count].copy_from_slice(values);
     }
 
     /// Returns the current output node activation levels
     /// as a vector.
+    /// 
+    /// /// # Examples
+    /// ```
+    /// use oxineat::{
+    ///     genomics::{GeneticConfig, Genome},
+    ///     networks::RealTimeNetwork,
+    /// };
+    /// 
+    /// let genome = Genome::new(&GeneticConfig{
+    ///     initial_expression_chance: 1.0,
+    ///     ..GeneticConfig::zero()
+    /// });
+    /// 
+    /// let mut network = RealTimeNetwork::new(&genome);
+    /// assert_eq!(network.outputs()[0], 0.0);
+    /// 
+    /// network.set_inputs(&[1.0]);
+    /// network.activate();
+    /// assert_ne!(network.outputs()[0], 0.0);
+    /// ```
     pub fn outputs(&self) -> Vec<f32> {
         self.activation_levels[self.input_count..self.input_count + self.output_count].to_vec()
     }
@@ -208,7 +270,7 @@ impl fmt::Display for RealTimeNetwork {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{genomes::ActivationType, GeneticConfig};
+    use crate::genomics::{ActivationType, GeneticConfig};
     use std::num::NonZeroUsize;
 
     fn sigmoid(x: f32) -> f32 {

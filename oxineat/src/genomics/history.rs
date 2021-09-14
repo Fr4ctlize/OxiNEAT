@@ -1,6 +1,8 @@
 use crate::genomics::GeneticConfig;
 use crate::Innovation;
 
+use ahash::RandomState;
+
 use std::collections::hash_map::{Entry, HashMap};
 
 /// A `History` keeps track of gene and node innovations in a
@@ -23,9 +25,9 @@ use std::collections::hash_map::{Entry, HashMap};
 pub struct History {
     next_gene_innovation: Innovation,
     next_node_innovation: Innovation,
-    gene_innovations: HashMap<(Innovation, Innovation), Innovation>,
+    gene_innovations: HashMap<(Innovation, Innovation), Innovation, RandomState>,
     gene_endpoints: Vec<(Innovation, Innovation)>,
-    node_innovations: HashMap<Innovation, (Innovation, Innovation, Innovation)>,
+    node_innovations: HashMap<Innovation, (Innovation, Innovation, Innovation), RandomState>,
 }
 
 impl History {
@@ -59,7 +61,7 @@ impl History {
             next_node_innovation: config.input_count.get() + config.output_count.get(),
             gene_innovations,
             gene_endpoints,
-            node_innovations: HashMap::new(),
+            node_innovations: HashMap::default(),
         }
     }
 

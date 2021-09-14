@@ -19,6 +19,8 @@ use crate::genomics::{ActivationType, Genome, NodeType};
 use crate::Innovation;
 use connection::Connection;
 
+use ahash::RandomState;
+
 use std::collections::HashMap;
 use std::fmt;
 
@@ -81,7 +83,7 @@ impl RealTimeNetwork {
             .unzip();
         let total_node_count = input_nodes.len() + output_nodes.len() + hidden_nodes.len();
 
-        let node_index_from_id: HashMap<_, _> = node_ids
+        let node_index_from_id: HashMap<_, _, RandomState> = node_ids
             .iter()
             .enumerate()
             .map(|(i, id)| (*id, i))

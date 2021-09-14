@@ -1,5 +1,9 @@
 use super::*;
 
+use ahash::RandomState;
+
+use std::collections::HashMap;
+
 /// Auxiliary type for offspring generation.
 /// Handles all the tasks of generating a population's
 /// offspring according to the specified configs
@@ -30,7 +34,7 @@ impl<'a> OffspringFactory<'a> {
     pub(super) fn generate_offspring(
         &mut self,
         allotted_offspring: &[usize],
-    ) -> HashMap<SpeciesID, Vec<Genome>> {
+    ) -> HashMap<SpeciesID, Vec<Genome>, RandomState> {
         let mut offspring_of_species = self
             .species
             .iter()
@@ -56,7 +60,7 @@ impl<'a> OffspringFactory<'a> {
     /// to the offspring.
     fn add_species_elite(
         &mut self,
-        offpring_map: &mut HashMap<SpeciesID, Vec<Genome>>,
+        offpring_map: &mut HashMap<SpeciesID, Vec<Genome>, RandomState>,
         species_index: usize,
         elite: usize,
     ) {
@@ -73,7 +77,7 @@ impl<'a> OffspringFactory<'a> {
     fn add_mated_offspring(
         &mut self,
         offspring: usize,
-        species_offspring: &mut HashMap<SpeciesID, Vec<Genome>>,
+        species_offspring: &mut HashMap<SpeciesID, Vec<Genome>, RandomState>,
         species_index: usize,
     ) {
         // We need to get the species this way to avoid

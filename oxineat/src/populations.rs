@@ -16,8 +16,6 @@ pub use species::{Species, SpeciesID};
 
 use crate::genomics::{GeneticConfig, Genome, History};
 
-use std::collections::HashMap;
-
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
 
 /// A population of genomes.

@@ -1,6 +1,7 @@
 use crate::Innovation;
 
 use serde::{Deserialize, Serialize};
+use ahash::RandomState;
 
 use std::collections::HashSet;
 use std::fmt;
@@ -9,6 +10,7 @@ use std::fmt;
 /// of activation function the node's network
 /// equivalent will use.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum ActivationType {
     Sigmoid,
     Identity,
@@ -34,8 +36,8 @@ pub enum NodeType {
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub struct Node {
     id: Innovation,
-    inputs: HashSet<Innovation>,
-    outputs: HashSet<Innovation>,
+    inputs: HashSet<Innovation, RandomState>,
+    outputs: HashSet<Innovation, RandomState>,
     node_type: NodeType,
     activation_type: ActivationType,
 }
@@ -52,8 +54,8 @@ impl Node {
     pub fn new(id: Innovation, node_type: NodeType, activation_type: ActivationType) -> Node {
         Node {
             id,
-            inputs: HashSet::new(),
-            outputs: HashSet::new(),
+            inputs: HashSet::default(),
+            outputs: HashSet::default(),
             node_type,
             activation_type,
         }

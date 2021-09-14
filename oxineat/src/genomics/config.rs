@@ -43,7 +43,7 @@ pub struct GeneticConfig {
     /// Magnitude of bound on weight mutation uniform distribution.
     /// It is assumed to be lesser than [`weight_bound`]
     ///
-    /// [`weight_bound`]: crate::GeneticConfig::weight_bound
+    /// [`weight_bound`]: GeneticConfig::weight_bound
     pub weight_mutation_power: f32,
     /// Chance of a node addition mutation taking place during mating.
     pub node_addition_mutation_chance: f32,

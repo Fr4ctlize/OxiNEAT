@@ -17,8 +17,10 @@ pub use nodes::{ActivationType, Node, NodeType};
 
 use crate::Innovation;
 
+use ahash::RandomState;
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
 use serde::{Deserialize, Serialize};
+
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -28,9 +30,9 @@ use std::fmt;
 /// Suports Serde for convenient genome saving and loading.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Genome {
-    genes: HashMap<Innovation, Gene>,
-    nodes: HashMap<Innovation, Node>,
-    node_pairings: HashSet<(Innovation, Innovation)>,
+    genes: HashMap<Innovation, Gene, RandomState>,
+    nodes: HashMap<Innovation, Node, RandomState>,
+    node_pairings: HashSet<(Innovation, Innovation), RandomState>,
     pub(in crate) fitness: f32,
 }
 
@@ -84,11 +86,11 @@ impl Genome {
         }
     }
 
-    fn generate_nodes(config: &GeneticConfig) -> HashMap<Innovation, Node> {
+    fn generate_nodes(config: &GeneticConfig) -> HashMap<Innovation, Node, RandomState> {
         let input_count = config.input_count.get();
         let output_count = config.output_count.get();
 
-        let mut nodes = HashMap::with_capacity(input_count + output_count);
+        let mut nodes = HashMap::with_capacity_and_hasher(input_count + output_count, RandomState::new());
 
         for i in 0..input_count {
             nodes.insert(i, Node::new(i, NodeType::Sensor, ActivationType::Identity));
@@ -112,13 +114,13 @@ impl Genome {
     }
 
     fn generate_initial_genes(
-        nodes: &mut HashMap<Innovation, Node>,
+        nodes: &mut HashMap<Innovation, Node, RandomState>,
         config: &GeneticConfig,
-    ) -> (HashMap<Innovation, Gene>, HashSet<(Innovation, Innovation)>) {
+    ) -> (HashMap<Innovation, Gene, RandomState>, HashSet<(Innovation, Innovation), RandomState>) {
         let input_count = config.input_count.get();
         let output_count = config.output_count.get();
-        let mut genes = HashMap::new();
-        let mut node_pairings = HashSet::new();
+        let mut genes = HashMap::default();
+        let mut node_pairings = HashSet::default();
 
         if config.initial_expression_chance != 0.0 {
             let mut rng = rand::thread_rng();
@@ -152,7 +154,7 @@ impl Genome {
     /// This function will panic if a gene with the same
     /// `gene_id` already existed in the genome, if either `input_id`
     /// or `output_id` do not correspond to nodes present in the genome,
-    /// or if `output_id` corresponds to a sensor node. 
+    /// or if `output_id` corresponds to a sensor node.
     ///
     /// # Examples
     /// ```
@@ -410,7 +412,7 @@ impl Genome {
     /// Returns an error if no viable pair of nodes
     /// exists or [too many] attempts have failed.
     ///
-    /// [too many]: crate::genomics::GeneticConfig::max_gene_mutation_attempts
+    /// [too many]: crate::genomics::GeneticConfig::max_gene_addition_mutation_attempts
     ///
     /// # Examples
     /// ```
@@ -612,7 +614,8 @@ impl Genome {
             None => return Err(NodeMutationError::EmptyGenome.into()),
         };
 
-        let (mutation, duplicate) = self.get_node_mutation_innovation_triplet(gene_to_split, history);
+        let (mutation, duplicate) =
+            self.get_node_mutation_innovation_triplet(gene_to_split, history);
         Ok(self.add_node_mutation(gene_to_split, mutation, duplicate, history, config))
     }
 
@@ -1056,7 +1059,7 @@ impl Genome {
     /// };
     ///
     /// let genome = Genome::new(&config);
-    /// 
+    ///
     /// for gene in genome.genes() {
     ///     println!("gene: {}", gene);
     /// }
@@ -1434,9 +1437,7 @@ mod tests {
 
         let mut genome = Genome::new(&config);
         genome.add_node(2, ActivationType::Sigmoid);
-        let gene = genome
-            .mutate_add_gene(&mut history, &config)
-            .unwrap();
+        let gene = genome.mutate_add_gene(&mut history, &config).unwrap();
 
         assert_eq!(
             gene.innovation(),
@@ -1462,9 +1463,7 @@ mod tests {
         genome.add_gene(42, 0, 50, 2.0);
         genome.add_gene(43, 50, 1, 2.0);
         genome.add_gene(44, 1, 50, 2.0);
-        let gene = genome
-            .mutate_add_gene(&mut history, &config)
-            .unwrap();
+        let gene = genome.mutate_add_gene(&mut history, &config).unwrap();
 
         assert_eq!(gene.input(), gene.output());
     }
@@ -1486,9 +1485,7 @@ mod tests {
         // chosen even though it is permitted.
         genome.add_gene(42, 1, 1, 5.0);
 
-        genome
-            .mutate_add_gene(&mut history, &config)
-            .unwrap();
+        genome.mutate_add_gene(&mut history, &config).unwrap();
     }
 
     #[test]
@@ -1501,9 +1498,7 @@ mod tests {
         let mut history = History::new(&config);
 
         let mut genome = Genome::new(&config);
-        let (input, node, output) = genome
-            .mutate_add_node(&mut history, &config)
-            .unwrap();
+        let (input, node, output) = genome.mutate_add_node(&mut history, &config).unwrap();
 
         assert_eq!(input.innovation(), *node.input_genes().next().unwrap());
         assert_eq!(output.innovation(), *node.output_genes().next().unwrap());
@@ -1524,9 +1519,7 @@ mod tests {
         let mut history = History::new(&config);
 
         let mut genome = Genome::new(&config);
-        genome
-            .mutate_add_node(&mut history, &config)
-            .unwrap();
+        genome.mutate_add_node(&mut history, &config).unwrap();
     }
 
     #[test]

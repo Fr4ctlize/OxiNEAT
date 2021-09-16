@@ -18,11 +18,9 @@ may change in the future.
 # Example
 ```rust
 use oxineat::{
-    PopulationConfig,
-    GeneticConfig,
-    genomes::{Genome, ActivationType},
+    genomics::{ActivationType, GeneticConfig, Genome},
     networks::FunctionApproximatorNetwork,
-    populations::Population,
+    populations::{Population, PopulationConfig},
 };
 use std::num::NonZeroUsize;
 
@@ -41,7 +39,7 @@ fn evaluate_xor(genome: &Genome) -> f32 {
 
     let mut errors = [0.0, 0.0, 0.0, 0.0];
     for (i, (input, output)) in values.iter().enumerate() {
-        errors[i] = (network.get_value(input)[0] - output).abs();
+        errors[i] = (network.evaluate_at(input)[0] - output).abs();
         if errors[i] < ERROR_MARGIN {
             errors[i] = 0.0;
         }

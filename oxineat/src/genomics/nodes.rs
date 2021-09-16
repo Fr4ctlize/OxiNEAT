@@ -12,10 +12,16 @@ use std::fmt;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ActivationType {
+    // 1 / (1 + exp(-4.9x))
     Sigmoid,
+    // x
     Identity,
+    // 0   if x < 0
+    // x   if x ≤ 0
     ReLU,
+    // exp(-x²)
     Gaussian,
+    // sin(πx)
     Sinusoidal,
 }
 

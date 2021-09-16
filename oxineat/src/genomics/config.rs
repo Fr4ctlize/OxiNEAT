@@ -4,6 +4,12 @@ use std::num::NonZeroUsize;
 
 /// Configuration data for genome generation
 /// and inter-genome operations.
+/// 
+/// # Note
+/// All quantities expressing probabilities
+/// should be in the range [0.0, 1.0]. Using
+/// values that are not in this bound may result
+/// in odd behaviours and/or incorrect programs.
 #[derive(Clone, Debug)]
 pub struct GeneticConfig {
     /// Number of inputs in a genome.
@@ -13,13 +19,13 @@ pub struct GeneticConfig {
     /// Possible activation types for nodes in a genome.
     /// If an empty vector is given, nodes will default
     /// to [`Sigmoid`].
-    /// 
+    ///
     /// [`Sigmoid`]: crate::genomics::ActivationType
     pub activation_types: Vec<ActivationType>,
     /// Activation types of output nodes in a genome.
     /// If fewer than [`output_count`] are specified,
     /// the default is [`Sigmoid`].
-    /// 
+    ///
     /// [`output_count`]: GeneticConfig::output_count
     /// [`Sigmoid`]: crate::genomics::ActivationType
     pub output_activation_types: Vec<ActivationType>,
@@ -71,10 +77,31 @@ impl GeneticConfig {
     /// Returns a "zero-valued" default configuration.
     /// All values are 0, empty, or in the case of
     /// `NonZeroUsize`s, 1.
-    pub fn zero() -> GeneticConfig {
+    ///
+    /// # Note
+    /// This value is not suitable for use in most experiments.
+    /// It is meant as a way to fill in unused values during
+    /// configuration instantiation.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    ///
+    /// let cfg1 = GeneticConfig::zero();
+    ///
+    /// let cfg2 = GeneticConfig {
+    ///     // Specify some values here...
+    ///     recursion_chance: 1.0,
+    ///     // Default the rest...
+    ///     ..GeneticConfig::zero()
+    /// };
+    pub const fn zero() -> GeneticConfig {
         GeneticConfig {
-            input_count: NonZeroUsize::new(1).unwrap(),
-            output_count: NonZeroUsize::new(1).unwrap(),
+            // SAFETY: 1 is a valid NonZeroUsize. Replace this with
+            // NonZeroUsize::new(1).unwrap() once const Option::unwrap
+            // becomes stable.
+            input_count: unsafe { NonZeroUsize::new_unchecked(1) },
+            output_count: unsafe { NonZeroUsize::new_unchecked(1) },
             activation_types: vec![],
             output_activation_types: vec![],
             child_mutation_chance: 0.0,

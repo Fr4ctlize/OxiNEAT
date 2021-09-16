@@ -141,6 +141,8 @@ impl RealTimeNetwork {
         self.compute_activations();
     }
 
+    /// Propagates each node's signal through all its
+    /// outgoing connections.
     fn fire_nodes(&mut self) {
         for (activation, output_connections) in self
             .activation_levels
@@ -153,6 +155,8 @@ impl RealTimeNetwork {
         }
     }
 
+    /// Computes each node's activation level,
+    /// based on input sum.
     fn compute_activations(&mut self) {
         for ((input_sum, activation_level), activation_function) in self.input_sums
             [self.input_count..]
@@ -258,8 +262,8 @@ fn compute_activation(input_sum: f32, activation_function: ActivationType) -> f3
         ActivationType::Sigmoid => 1.0 / (1.0 + (-4.9 * input_sum).exp()),
         ActivationType::Identity => input_sum,
         ActivationType::ReLU => input_sum.max(0.0),
-        ActivationType::Gaussian => (-input_sum * input_sum).exp(),
-        ActivationType::Sinusoidal => (input_sum / std::f32::consts::PI).sin(),
+        ActivationType::Gaussian => (-input_sum.powf(2.0)).exp(),
+        ActivationType::Sinusoidal => (input_sum * std::f32::consts::PI).sin(),
     }
 }
 

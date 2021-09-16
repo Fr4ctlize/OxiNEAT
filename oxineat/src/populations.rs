@@ -34,6 +34,14 @@ impl Population {
     /// These configurations shouldn't be modified once evolution
     /// begins, thus they are copied and kept by the population for
     /// the duration of its lifetime.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// 
+    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// ```
     pub fn new(population_config: PopulationConfig, genetic_config: GeneticConfig) -> Population {
         Population {
             species: {
@@ -57,6 +65,27 @@ impl Population {
     ///
     /// The return value of the evaluation function
     /// should be positive.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// 
+    /// let mut population = Population::new(
+    ///     PopulationConfig::zero(),
+    ///     GeneticConfig {
+    ///         initial_expression_chance: 1.0,
+    ///         ..GeneticConfig::zero()
+    ///     },
+    /// );
+    /// 
+    /// population.evaluate_fitness(|g| {
+    ///     let mut network = FunctionApproximatorNetwork::new::<1>(g);
+    ///     // Networks with outputs closer to 0 are given higher scores.
+    ///     (1.0 - (network.evaluate_at(&[1.0])[0] - 0.0)).powf(2.0)
+    /// });
+    /// ```
     pub fn evaluate_fitness<E>(&mut self, mut evaluator: E)
     where
         E: FnMut(&Genome) -> f32,
@@ -76,6 +105,14 @@ impl Population {
     /// will have a chance of being placed into their parent's
     /// species without speciation, which seems to help NEAT
     /// find solutions faster. (See [[Nodine, T., 2010]].)
+    /// 
+    /// # Panics
+    /// This function will panic if 
+    /// `config.survival_threshold == 0.0` and
+    /// `config.elitism` isn't high enough to cover
+    /// the number of offspring assigned to a species,
+    /// as there would be no parents from which to generate
+    /// offspring.
     ///
     /// # Errors
     /// Returns an error if the population has become degenerate
@@ -84,6 +121,33 @@ impl Population {
     ///
     /// [adoption rate]: PopulationConfig::adoption_rate
     /// [Nodine, T., 2010]: https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.175.2884&rep=rep1&type=pdf
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// 
+    /// let mut population = Population::new(
+    ///     PopulationConfig {
+    ///         survival_threshold: 0.4,
+    ///         ..PopulationConfig::zero()
+    ///     },
+    ///     GeneticConfig {
+    ///         initial_expression_chance: 1.0,
+    ///         ..GeneticConfig::zero()
+    ///     },
+    /// );
+    /// 
+    /// population.evaluate_fitness(|g| {
+    ///     // Do something useful...
+    ///     1.0
+    /// });
+    /// 
+    /// if let Err(e) = population.evolve() {
+    ///     eprintln!("{}", e);
+    /// }
+    /// ```
     pub fn evolve(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         match self.allot_offspring() {
             Ok(allotted_offspring) => {
@@ -113,6 +177,8 @@ impl Population {
         }
     }
 
+    /// Collects all species adjusted fitnesses.
+    /// Returns `None` if population fitness sum is 0.
     fn get_species_adjusted_fitness(&self) -> Option<Vec<f32>> {
         let fitnesses = self.species_fitness_with_stagnation_penalty();
         let fitness_sum: f32 = fitnesses.iter().copied().sum();
@@ -127,6 +193,8 @@ impl Population {
         )
     }
 
+    /// Returns each species' adjusted fitness,
+    /// with stagnation penalties applied.
     fn species_fitness_with_stagnation_penalty(&self) -> Vec<f32> {
         self.species
             .iter()
@@ -169,6 +237,7 @@ impl Population {
         }
     }
 
+    /// Sorts each species' members by fitness in descending order.
     fn sort_species_members_by_decreasing_fitness(&mut self) {
         for species in &mut self.species {
             species.genomes.sort_unstable_by(|g1, g2| {
@@ -242,6 +311,8 @@ impl Population {
         incompatibles.into_iter()
     }
 
+    /// Removes all extinct (0 assigned offspring)
+    /// species from the population.
     fn remove_extinct_species(&mut self) {
         let mut i = 0;
         while i < self.species.len() {
@@ -257,11 +328,50 @@ impl Population {
     /// Resets the population to an initial randomized state.
     /// Used primarily in case of population degeneration, e.g.
     /// when all genomes have a fitness score of 0.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// 
+    /// let mut population = Population::new(
+    ///     PopulationConfig::zero(),
+    ///     GeneticConfig::zero(),
+    /// );
+    /// 
+    /// // Evolve the population on some task, until
+    /// // population.evolve() returns an Err.
+    /// population.reset();
+    /// ```
     pub fn reset(&mut self) {
         *self = Population::new(self.population_config.clone(), self.genetic_config.clone());
     }
 
     /// Returns the currently best-performing genome.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// 
+    /// let mut population = Population::new(
+    ///     PopulationConfig {
+    ///         population_size: std::num::NonZeroUsize::new(20).unwrap(),
+    ///         ..PopulationConfig::zero()
+    ///     },
+    ///     GeneticConfig::zero(),
+    /// );
+    /// 
+    /// let mut fitness = 0.0;
+    /// population.evaluate_fitness(move |g| {
+    ///     fitness += 10.0;
+    ///     fitness
+    /// });
+    /// 
+    /// assert_eq!(population.champion().fitness(), 20.0 * 10.0);
+    /// ```
     pub fn champion(&self) -> &Genome {
         self.species
             .iter()
@@ -275,20 +385,73 @@ impl Population {
     }
 
     /// Returns an iterator over all current genomes.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// 
+    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// 
+    /// for genome in population.genomes() {
+    ///     println!("{}", genome);
+    /// }
+    /// ```
     pub fn genomes(&self) -> impl Iterator<Item = &Genome> {
         self.species.iter().flat_map(|s| &s.genomes)
     }
 
     /// Returns an iterator over all current species.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// 
+    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// 
+    /// for species in population.species() {
+    ///     println!(
+    ///         "Species {:?} contains the following genomes: {:?}",
+    ///         species.id(),
+    ///         species.genomes().cloned().collect::<Vec<_>>()
+    ///     );
+    /// }
+    /// ```
     pub fn species(&self) -> impl Iterator<Item = &Species> {
         self.species.iter()
     }
 
     /// Returns the current generation number.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// 
+    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// 
+    /// assert_eq!(population.generation(), 0);
+    /// ```
     pub fn generation(&self) -> usize {
         self.generation
     }
 
+    /// Returns the population's innovation history.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat::populations::{Population, PopulationConfig};
+    /// 
+    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// let history = population.history();
+    /// 
+    /// for ((input_node, output_node), gene) in history.gene_innovation_history() {
+    ///     println!("gene innovation with id {} from node {} to node {}",
+    ///         gene, input_node, output_node);
+    /// }
+    /// ```
     pub fn history(&self) -> &History {
         &self.history
     }

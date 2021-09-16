@@ -75,7 +75,7 @@ impl Genome {
     /// assert!(genome.genes().all(|g| (0..3 * 2).contains(&g.innovation())));
     /// ```
     pub fn new(config: &GeneticConfig) -> Genome {
-        let mut nodes = Self::generate_nodes(config);
+        let mut nodes = Self::generate_input_output_nodes(config);
         let (genes, node_pairings) = Self::generate_initial_genes(&mut nodes, config);
 
         Genome {
@@ -86,11 +86,16 @@ impl Genome {
         }
     }
 
-    fn generate_nodes(config: &GeneticConfig) -> HashMap<Innovation, Node, RandomState> {
+    /// Generate the input and output nodes
+    /// corresponding to the passed configuration.
+    fn generate_input_output_nodes(
+        config: &GeneticConfig,
+    ) -> HashMap<Innovation, Node, RandomState> {
         let input_count = config.input_count.get();
         let output_count = config.output_count.get();
 
-        let mut nodes = HashMap::with_capacity_and_hasher(input_count + output_count, RandomState::new());
+        let mut nodes =
+            HashMap::with_capacity_and_hasher(input_count + output_count, RandomState::new());
 
         for i in 0..input_count {
             nodes.insert(i, Node::new(i, NodeType::Sensor, ActivationType::Identity));
@@ -113,10 +118,18 @@ impl Genome {
         nodes
     }
 
+    /// Generate the initial genes for the passed
+    /// set of I/O nodes, each with [`initial_expression_chance`]
+    /// probability of being expressed.
+    ///
+    /// [`initial_expression_chance`]: crate::genomics::GeneticConfig::initial_expression_chance
     fn generate_initial_genes(
         nodes: &mut HashMap<Innovation, Node, RandomState>,
         config: &GeneticConfig,
-    ) -> (HashMap<Innovation, Gene, RandomState>, HashSet<(Innovation, Innovation), RandomState>) {
+    ) -> (
+        HashMap<Innovation, Gene, RandomState>,
+        HashSet<(Innovation, Innovation), RandomState>,
+    ) {
         let input_count = config.input_count.get();
         let output_count = config.output_count.get();
         let mut genes = HashMap::default();
@@ -406,9 +419,12 @@ impl Genome {
 
     /// Induces a _gene mutation_ in the genome.
     /// If successful, returns the newly added gene.
+    /// 
+    /// # Note
+    /// This function will not succeed if
+    /// `config.max_gene_addition_mutation_attempts == 0.0`.
     ///
     /// # Errors
-    ///
     /// Returns an error if no viable pair of nodes
     /// exists or [too many] attempts have failed.
     ///
@@ -444,7 +460,7 @@ impl Genome {
         config: &GeneticConfig,
     ) -> Result<&Gene, Box<dyn std::error::Error>> {
         let non_sensor_nodes = self.select_non_sensor_nodes();
-        let mut potential_inputs = self.select_potential_input_nodes(&non_sensor_nodes);
+        let mut potential_inputs = self.select_potential_input_nodes(non_sensor_nodes.len());
 
         if potential_inputs.is_empty() {
             return Err(GeneMutationError::AllInputsFullyConnected.into());
@@ -461,6 +477,7 @@ impl Genome {
         }
     }
 
+    /// Returns all non-sensor nodes in the genome.
     fn select_non_sensor_nodes(&self) -> HashSet<Innovation> {
         self.nodes
             .iter()
@@ -474,14 +491,13 @@ impl Genome {
             .collect()
     }
 
-    fn select_potential_input_nodes(
-        &self,
-        non_sensor_nodes: &HashSet<Innovation>,
-    ) -> Vec<Innovation> {
+    /// Returns all nodes that are not already
+    /// fully-connected.
+    fn select_potential_input_nodes(&self, non_sensor_node_count: usize) -> Vec<Innovation> {
         self.nodes
             .iter()
             .filter_map(|(id, n)| {
-                if n.output_genes().count() < non_sensor_nodes.len() {
+                if n.output_genes().count() < non_sensor_node_count {
                     Some(*id)
                 } else {
                     None
@@ -490,6 +506,8 @@ impl Genome {
             .collect()
     }
 
+    /// Randomly chooses a node from `potential_outputs` that
+    /// `candidate_input` could be linked to by a new gene.
     fn choose_output_node_for(
         &self,
         candidate_input: &Innovation,
@@ -510,12 +528,16 @@ impl Genome {
         }
     }
 
+    /// Returns the set of all nodes that are outputs
+    /// of an output gene of `node`.
     fn output_nodes_of(&self, node: &Node) -> HashSet<Innovation> {
         node.output_genes()
             .map(|id| self.genes[id].output())
             .collect()
     }
 
+    /// Returns the first member of `potential_inputs ⨯ potential_outputs`
+    /// that is computed.
     fn find_node_pair(
         &self,
         potential_inputs: &[Innovation],
@@ -532,6 +554,8 @@ impl Genome {
             .next()
     }
 
+    /// Adds the result of a gene mutation
+    /// to the genome.
     fn add_gene_mutation(
         &mut self,
         input_node: Innovation,
@@ -619,15 +643,23 @@ impl Genome {
         Ok(self.add_node_mutation(gene_to_split, mutation, duplicate, history, config))
     }
 
+    /// Randomly selects a gene from the genome.
+    /// Returns `None` if the genome is empty.
     fn choose_random_gene(&self) -> Option<Innovation> {
         let mut rng = rand::thread_rng();
         self.genes.keys().choose(&mut rng).cloned()
     }
 
+    /// Retrieves the next node mutation triplet
+    /// from `history`, accounting for the possibility
+    /// that a node mutation on `gene_to_split` has
+    /// previoulsy occurred in the genome or its
+    /// ancestors. If this is the case, the returned
+    /// `bool` is `true`, otherwise it's false.
     fn get_node_mutation_innovation_triplet(
         &mut self,
         gene_to_split: Innovation,
-        history: &mut History,
+        history: &History,
     ) -> ((Innovation, Innovation, Innovation), bool) {
         let (input_gene, new_node, output_gene) =
             history.next_node_innovation(gene_to_split, false);
@@ -639,6 +671,8 @@ impl Genome {
         }
     }
 
+    /// Adds the result of a node mutation
+    /// to the genome.
     fn add_node_mutation(
         &mut self,
         gene_to_split: Innovation,
@@ -681,6 +715,8 @@ impl Genome {
         )
     }
 
+    /// Suppresses the passed gene without checking if
+    /// it is part of the genome.
     fn suppress_gene_unchecked(&mut self, gene: Innovation) {
         self.genes.get_mut(&gene).unwrap().set_suppressed(true);
     }
@@ -1010,6 +1046,8 @@ impl Genome {
             + config.common_weight_factor * common_weight_diff
     }
 
+    /// Returns the set of genes common to both genomes,
+    /// and the corresponding pairs of weights.
     fn common_innovations_and_weights(
         g1: &Genome,
         g2: &Genome,
@@ -1023,15 +1061,23 @@ impl Genome {
             .unzip()
     }
 
+    /// Returns the average difference of all pairs
+    /// of weights.
     fn weight_diff_average(weight_pairs: &[(f32, f32)]) -> f32 {
         let count = weight_pairs.len();
-        weight_pairs
-            .iter()
-            .map(|(w1, w2)| (w1 - w2).abs())
-            .sum::<f32>()
-            / count as f32
+        if count != 0 {
+            weight_pairs
+                .iter()
+                .map(|(w1, w2)| (w1 - w2).abs())
+                .sum::<f32>()
+                / count as f32
+        } else {
+            0.0
+        }
     }
 
+    /// Counts the number of disjoint genes in the genome
+    /// relative to the supplied set of common genes.
     fn count_disjoint_genes(&self, common_innovations: &HashSet<Innovation>) -> usize {
         let common_innovation_max = common_innovations.iter().max().cloned().unwrap_or_default();
         self.genes

@@ -11,6 +11,9 @@
 //! and as a tool for my own experimentation. Critiques and contributions
 //! are welcome.
 //! 
+//! This is still very much a work-in-progress, so interfaces and implementations
+//! may change in the future.
+//! 
 //! # Usage example
 //! The following is an implementation of the classic XOR problem:
 //! 
@@ -37,7 +40,7 @@
 //!
 //!     let mut errors = [0.0, 0.0, 0.0, 0.0];
 //!     for (i, (input, output)) in values.iter().enumerate() {
-//!         errors[i] = (network.get_value(input)[0] - output).abs();
+//!         errors[i] = (network.evaluate_at(input)[0] - output).abs();
 //!         if errors[i] < ERROR_MARGIN {
 //!             errors[i] = 0.0;
 //!         }

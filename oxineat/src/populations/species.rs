@@ -22,7 +22,7 @@ pub struct SpeciesID(pub usize, pub usize);
 ///
 /// Species will stagnate after [`stagnation_threshold`]
 /// generations without improving the species' fitness,
-/// and will thereafter be penalized when mating.
+/// and will thereafter be penalized during reproduction.
 ///
 /// [genetic distance]: PopulationConfig::distance_threshold
 /// [`stagnation_threshold`]: PopulationConfig::survival_threshold
@@ -37,7 +37,19 @@ pub struct Species {
 
 impl Species {
     /// Creates a new species with the specified ID and
-    /// representative.
+    /// representative. The representative is also added
+    /// to the species' genome pool.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    ///
+    /// let species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     Genome::new(&GeneticConfig::zero()),
+    /// );
+    /// ```
     pub fn new(id: SpeciesID, representative: Genome) -> Species {
         Species {
             id,
@@ -49,27 +61,92 @@ impl Species {
     }
 
     /// Returns the species' ID.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    ///
+    /// let species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     Genome::new(&GeneticConfig::zero()),
+    /// );
+    ///
+    /// assert_eq!(species.id(), SpeciesID(1, 0));
+    /// ```
     pub fn id(&self) -> SpeciesID {
         self.id
     }
 
     /// Returns the species' representative.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    ///
+    /// let representative = Genome::new(&GeneticConfig::zero());
+    /// let species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     representative.clone(),
+    /// );
+    ///
+    /// assert_eq!(species.representative(), &representative);
+    /// ```
     pub fn representative(&self) -> &Genome {
         &self.representative
     }
 
+    /// Returns the genetic distance between the species'
+    /// representative and `other`.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    ///
+    /// let config = GeneticConfig {
+    ///     disjoint_gene_factor: 1.0,
+    ///     excess_gene_factor: 1.0,
+    ///     common_weight_factor: 0.4,
+    ///     ..GeneticConfig::zero()
+    /// };
+    /// let representative = Genome::new(&config);
+    /// let species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     representative.clone(),
+    /// );
+    ///
+    /// assert_eq!(species.genetic_distance(&representative, &config), 0.0);
+    /// ```
     pub fn genetic_distance(&self, other: &Genome, config: &GeneticConfig) -> f32 {
         Genome::genetic_distance(&self.representative, other, config)
     }
 
     /// Adds a genome to the species.
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    ///
+    /// let config = GeneticConfig::zero();
+    /// let mut species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     Genome::new(&config),
+    /// );
+    ///
+    /// let genome = Genome::new(&config);
+    /// species.add_genome(genome.clone());
+    ///
+    /// assert!(species.genomes().find(|g| *g == &genome).is_some());
+    /// ```
     pub fn add_genome(&mut self, genome: Genome) {
         self.genomes.push(genome);
     }
 
     /// Updates the species' record of maximum
     /// fitness, to keep track of stagnation.
-    pub fn update_fitness(&mut self) {
+    pub(super) fn update_fitness(&mut self) {
         let max_fitness = self
             .genomes
             .iter()
@@ -88,22 +165,98 @@ impl Species {
     /// Returns the species' _member-count adjusted_
     /// fitness. I.e., the average of the species'
     /// genome's fitnesses.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    /// 
+    /// let config = GeneticConfig::zero();
+    /// let mut species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     Genome::new(&config),
+    /// );
+    ///
+    /// let mut g1 = Genome::new(&config);
+    /// let mut g2 = Genome::new(&config);
+    /// g1.set_fitness(20.0);
+    /// g2.set_fitness(30.0);
+    /// species.add_genome(g1);
+    /// species.add_genome(g2);
+    /// 
+    /// // The species representative + `g1` and `g2`.
+    /// assert_eq!(species.adjusted_fitness(), (0.0 + 20.0 + 30.0) / 3.0);
+    /// ```
     pub fn adjusted_fitness(&self) -> f32 {
         self.genomes.iter().map(|g| g.fitness).sum::<f32>() / self.genomes.len() as f32
     }
 
     /// Returns the number of generations the species
     /// has been stagnated.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    /// 
+    /// let config = GeneticConfig::zero();
+    /// let species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     Genome::new(&config),
+    /// );
+    /// 
+    /// println!("{}", species.time_stagnated());
+    /// ```
     pub fn time_stagnated(&self) -> usize {
         self.stagnation
     }
 
-    /// Returns the species' members.
-    pub fn genomes(&self) -> &[Genome] {
-        &self.genomes
+    /// Returns an iterator over the species' members.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    /// 
+    /// let config = GeneticConfig::zero();
+    /// let mut species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     Genome::new(&config),
+    /// );
+    /// 
+    /// for g in species.genomes() {
+    ///     println!("{}", g);
+    /// }
+    /// ```
+    pub fn genomes(&self) -> impl Iterator<Item = &Genome> {
+        self.genomes.iter()
     }
 
     /// Returns the currently best-performing genome.
+    /// 
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat::populations::{SpeciesID, Species};
+    /// 
+    /// let config = GeneticConfig::zero();
+    /// 
+    /// let mut g1 = Genome::new(&config);
+    /// let mut g2 = Genome::new(&config);
+    /// let mut g3 = Genome::new(&config);
+    /// g1.set_fitness(5.0);
+    /// g2.set_fitness(20.0);
+    /// g3.set_fitness(10.0);
+    /// 
+    /// let mut species = Species::new(
+    ///     SpeciesID(1, 0),
+    ///     g1,
+    /// );
+    /// species.add_genome(g2.clone());
+    /// species.add_genome(g3);
+    /// 
+    /// assert_eq!(species.champion(), &g2);
+    /// ```
     pub fn champion(&self) -> &Genome {
         self.genomes
             .iter()

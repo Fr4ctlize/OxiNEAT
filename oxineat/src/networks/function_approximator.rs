@@ -18,6 +18,11 @@ impl FunctionApproximatorNetwork {
     /// effectively disable the entire network, 1 will dissallow
     /// any cycles, 2 will allow single pass through the longest
     /// cycle in the network, etc.
+    /// 
+    /// # Complexity
+    /// This function has `O(d^(n × MAX_NODE_VISITS))` time complexity,
+    /// and `O(n × MAX_NODE_VISITS)` space complexity,
+    /// where `d` is the highest output count in the genome's nodes.
     ///
     /// # Examples
     /// ```
@@ -44,6 +49,14 @@ impl FunctionApproximatorNetwork {
         FunctionApproximatorNetwork { network, depth }
     }
 
+    /// Calculates the length of the longest path
+    /// from the `root` node that doesn't pass through
+    /// any node more than `MAX_NODE_VISITS` times.
+    /// 
+    /// # Complexity
+    /// This function has `O(d^(n × MAX_NODE_VISITS))` time complexity,
+    /// and `O(n × MAX_NODE_VISITS)` space complexity,
+    /// where `d` is the highest output count in the genome's nodes.
     fn calculate_depth<const MAX_NODE_VISITS: u8>(
         network: &RealTimeNetwork,
         root: usize,
@@ -94,10 +107,10 @@ impl FunctionApproximatorNetwork {
     /// 
     /// for input in -20..=20 {
     ///     let input = input as f32 / 10.0;
-    ///     assert_eq!(network.get_value(&[input])[0], sigmoid(sigmoid(input)));
+    ///     assert_eq!(network.evaluate_at(&[input])[0], sigmoid(sigmoid(input)));
     /// }
     /// ```
-    pub fn get_value(&mut self, inputs: &[f32]) -> Vec<f32> {
+    pub fn evaluate_at(&mut self, inputs: &[f32]) -> Vec<f32> {
         self.network.clear_state();
         self.network.set_inputs(inputs);
         for _ in 0..self.depth {
@@ -153,7 +166,7 @@ mod test {
     }
 
     #[test]
-    fn get_value() {
+    fn evaluate_at() {
         let mut genome = Genome::new(&GeneticConfig::zero());
         genome.add_node(2, ActivationType::Sigmoid);
         genome.add_gene(0, 0, 2, 1.0);
@@ -161,7 +174,7 @@ mod test {
         let mut network = FunctionApproximatorNetwork::new::<1>(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
-            assert_eq!(network.get_value(&[input])[0], sigmoid(sigmoid(input)));
+            assert_eq!(network.evaluate_at(&[input])[0], sigmoid(sigmoid(input)));
         }
     }
 }

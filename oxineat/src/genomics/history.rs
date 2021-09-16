@@ -9,10 +9,6 @@ use std::collections::hash_map::{Entry, HashMap};
 /// population, in order to make sure identical mutations
 /// are assigned the same innovation numbers.
 ///
-/// Clearing the history's mutation lists once per generation
-/// is usually enough to keep innovation numbers while exploding
-/// without making the history too large.
-///
 /// For gene innovations the input and output nodes are used to
 /// identify identical mutations, and the corresponding innovation
 /// number is recorded.
@@ -206,7 +202,7 @@ impl History {
     /// Genome::new(&config).mutate_add_gene(&mut history, &config);
     ///
     /// for ((input_node, output_node), gene) in history.gene_innovation_history() {
-    ///     println!("gene id {} for gene from node {} to node {}",
+    ///     println!("gene innovation with id {} from node {} to node {}",
     ///         gene, input_node, output_node);
     /// }
     /// ```

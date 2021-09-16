@@ -7,6 +7,8 @@ pub struct Connection {
 }
 
 impl Connection {
+    /// Creates a new Connection with the specified
+    /// output node and weight.
     pub fn new(output: usize, weight: f32) -> Connection {
         Connection { output, weight }
     }

@@ -22,7 +22,7 @@ fn evaluate_xor(genome: &Genome) -> f32 {
 
     let mut errors = [0.0, 0.0, 0.0, 0.0];
     for (i, (input, output)) in values.iter().enumerate() {
-        errors[i] = (network.get_value(input)[0] - output).abs();
+        errors[i] = (network.evaluate_at(input)[0] - output).abs();
         if errors[i] < ERROR_MARGIN {
             errors[i] = 0.0;
         }

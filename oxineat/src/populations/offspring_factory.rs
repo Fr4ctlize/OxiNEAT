@@ -16,6 +16,7 @@ pub(super) struct OffspringFactory<'a> {
 }
 
 impl<'a> OffspringFactory<'a> {
+    /// Create a new offspring factory.
     pub(super) fn new(
         species: &'a [Species],
         history: &'a mut History,

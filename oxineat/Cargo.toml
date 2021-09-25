@@ -6,6 +6,7 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "A Rust implementation of NeuroEvolution of Augmenting Topologies"
 repository = "https://github.com/Fr4ctlize/OxiNEAT"
+documentation = "https://docs.rs/oxineat/"
 readme = "README.md"
 keywords = ["neat", "neuroevolution"]
 

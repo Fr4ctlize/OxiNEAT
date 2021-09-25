@@ -47,6 +47,8 @@ fn main() {
         weight_mutation_power: 2.5,
         node_addition_mutation_chance: 0.03,
         gene_addition_mutation_chance: 0.05,
+        node_deletion_mutation_chance: 0.001,
+        gene_deletion_mutation_chance: 0.002,
         max_gene_addition_mutation_attempts: 20,
         recursion_chance: 0.0,
         excess_gene_factor: 1.0,

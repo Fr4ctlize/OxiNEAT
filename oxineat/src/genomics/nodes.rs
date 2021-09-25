@@ -1,9 +1,11 @@
+use super::{AbsentEntryRemoval, GeneValidityError};
 use crate::Innovation;
 
-use serde::{Deserialize, Serialize};
 use ahash::RandomState;
+use serde::{Deserialize, Serialize};
 
 use std::collections::HashSet;
+use std::error::Error;
 use std::fmt;
 
 /// An ActivationType represents the type
@@ -50,11 +52,11 @@ pub struct Node {
 
 impl Node {
     /// Generate a new node with the passed parameters.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// ```
     pub fn new(id: Innovation, node_type: NodeType, activation_type: ActivationType) -> Node {
@@ -70,65 +72,125 @@ impl Node {
     /// Adds the passed innovation number to the node's
     /// list of input genes.
     ///
-    /// # Panics
-    /// This function panics if the gene is already
+    /// # Errors
+    /// This function returns an error if the gene is already
     /// in the node's inputs.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
-    /// 
-    /// node.add_input_gene(9);
+    ///
+    /// node.add_input_gene(9).unwrap();
     /// assert_eq!(*node.input_genes().next().unwrap(), 9);
-    /// 
-    /// // Will panic:
-    /// // node.add_input_gene(9);
+    ///
+    /// assert!(node.add_input_gene(9).is_err());
     /// ```
-    pub fn add_input_gene(&mut self, input_id: Innovation) {
-        if !self.inputs.contains(&input_id) {
-            self.inputs.insert(input_id);
+    pub fn add_input_gene(&mut self, gene_id: Innovation) -> Result<(), impl Error> {
+        if !self.inputs.contains(&gene_id) {
+            self.inputs.insert(gene_id);
+            Ok(())
         } else {
-            panic!("attempted to add duplicate input with ID {}", input_id)
+            Err(GeneValidityError::DuplicateGeneID(gene_id, None))
+        }
+    }
+
+    /// Removes the input gene matching the specified
+    /// innovation number.
+    ///
+    /// # Errors
+    /// This function returns an error if the node
+    /// has no input gene that matches the passed ID.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    ///
+    /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
+    ///
+    /// assert!(node.remove_input_gene(9).is_err());
+    ///
+    /// node.add_input_gene(9).unwrap();
+    ///
+    /// assert_eq!(node.input_genes().count(), 1);
+    ///
+    /// assert!(node.remove_input_gene(9).is_ok());
+    /// assert_eq!(node.input_genes().count(), 0);
+    /// ```
+    pub fn remove_input_gene(&mut self, gene_id: Innovation) -> Result<(), impl Error> {
+        if !self.inputs.remove(&gene_id) {
+            Err(AbsentEntryRemoval::Gene(gene_id))
+        } else {
+            Ok(())
         }
     }
 
     /// Adds the passed innovation number to the node's
     /// list of output genes.
     ///
-    /// # Panics
-    /// This function panics if the gene is already
+    /// # Errors
+    /// This function returns an error if the gene is already
     /// in the node's outputs.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
-    /// 
-    /// node.add_output_gene(9);
+    ///
+    /// node.add_output_gene(9).unwrap();
     /// assert_eq!(*node.output_genes().next().unwrap(), 9);
-    /// 
-    /// // Will panic:
-    /// // node.add_output_gene(9);
+    ///
+    /// assert!(node.add_output_gene(9).is_err());
     /// ```
-    pub fn add_output_gene(&mut self, output_id: Innovation) {
-        if !self.outputs.contains(&output_id) {
-            self.outputs.insert(output_id);
+    pub fn add_output_gene(&mut self, gene_id: Innovation) -> Result<(), impl Error> {
+        if !self.outputs.contains(&gene_id) {
+            self.outputs.insert(gene_id);
+            Ok(())
         } else {
-            panic!("attempted to add duplicate output with ID {}", output_id)
+            Err(GeneValidityError::DuplicateGeneID(gene_id, None))
+        }
+    }
+
+    /// Removes the output gene matching the specified
+    /// innovation number.
+    ///
+    /// # Errors
+    /// This function returns an error if the node
+    /// has no output gene that matches the passed ID.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    ///
+    /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
+    ///
+    /// assert!(node.remove_output_gene(9).is_err());
+    ///
+    /// node.add_output_gene(9).unwrap();
+    ///
+    /// assert_eq!(node.output_genes().count(), 1);
+    ///
+    /// assert!(node.remove_output_gene(9).is_ok());
+    /// assert_eq!(node.output_genes().count(), 0);
+    /// ```
+    pub fn remove_output_gene(&mut self, gene_id: Innovation) -> Result<(), impl Error> {
+        if !self.outputs.remove(&gene_id) {
+            Err(AbsentEntryRemoval::Gene(gene_id))
+        } else {
+            Ok(())
         }
     }
 
     /// Returns the node's innovation number.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
-    /// 
+    ///
     /// assert_eq!(node.innovation(), 5);
     /// ```
     pub fn innovation(&self) -> Innovation {
@@ -136,16 +198,16 @@ impl Node {
     }
 
     /// Returns an iterator over the node's input genes.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// node.add_input_gene(0);
     /// node.add_input_gene(1);
     /// node.add_input_gene(2);
-    /// 
+    ///
     /// for gene in node.input_genes() {
     ///     println!("Node {} has an input gene with id {}", node.innovation(), *gene);
     /// }
@@ -155,16 +217,16 @@ impl Node {
     }
 
     /// Returns an iterator over the node's output genes.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// node.add_output_gene(0);
     /// node.add_output_gene(1);
     /// node.add_output_gene(2);
-    /// 
+    ///
     /// for gene in node.output_genes() {
     ///     println!("Node {} has an output gene with id {}", node.innovation(), *gene);
     /// }
@@ -174,13 +236,13 @@ impl Node {
     }
 
     /// Returns the node's node type.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
-    /// 
+    ///
     /// assert_eq!(node.node_type(), NodeType::Neuron);
     /// ```
     pub fn node_type(&self) -> NodeType {
@@ -188,13 +250,13 @@ impl Node {
     }
 
     /// Returns the node's activation type.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{Node, NodeType, ActivationType};
-    /// 
+    ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
-    /// 
+    ///
     /// assert_eq!(node.activation_type(), ActivationType::Sigmoid);
     /// ```
     pub fn activation_type(&self) -> ActivationType {

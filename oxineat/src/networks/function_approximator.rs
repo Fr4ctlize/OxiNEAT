@@ -100,9 +100,9 @@ impl FunctionApproximatorNetwork {
     /// }
     ///
     /// let mut genome = Genome::new(&GeneticConfig::zero());
-    /// genome.add_node(2, ActivationType::Sigmoid);
-    /// genome.add_gene(0, 0, 2, 1.0);
-    /// genome.add_gene(1, 2, 1, 1.0);
+    /// genome.add_node(2, ActivationType::Sigmoid).unwrap();
+    /// genome.add_gene(0, 0, 2, 1.0).unwrap();
+    /// genome.add_gene(1, 2, 1, 1.0).unwrap();
     /// let mut network = FunctionApproximatorNetwork::new::<1>(&genome);
     /// 
     /// for input in -20..=20 {
@@ -131,13 +131,13 @@ mod test {
 
     fn test_genome() -> Genome {
         let mut genome = Genome::new(&GeneticConfig::zero());
-        genome.add_node(2, ActivationType::Sigmoid);
-        genome.add_gene(0, 0, 1, 0.0);
-        genome.add_gene(1, 0, 2, 0.0);
-        genome.add_gene(2, 1, 1, 0.0);
-        genome.add_gene(3, 1, 2, 0.0);
-        genome.add_gene(4, 2, 1, 0.0);
-        genome.add_gene(5, 2, 2, 0.0);
+        genome.add_node(2, ActivationType::Sigmoid).unwrap();
+        genome.add_gene(0, 0, 1, 0.0).unwrap();
+        genome.add_gene(1, 0, 2, 0.0).unwrap();
+        genome.add_gene(2, 1, 1, 0.0).unwrap();
+        genome.add_gene(3, 1, 2, 0.0).unwrap();
+        genome.add_gene(4, 2, 1, 0.0).unwrap();
+        genome.add_gene(5, 2, 2, 0.0).unwrap();
         genome
     }
 
@@ -168,9 +168,9 @@ mod test {
     #[test]
     fn evaluate_at() {
         let mut genome = Genome::new(&GeneticConfig::zero());
-        genome.add_node(2, ActivationType::Sigmoid);
-        genome.add_gene(0, 0, 2, 1.0);
-        genome.add_gene(1, 2, 1, 1.0);
+        genome.add_node(2, ActivationType::Sigmoid).unwrap();
+        genome.add_gene(0, 0, 2, 1.0).unwrap();
+        genome.add_gene(1, 2, 1, 1.0).unwrap();
         let mut network = FunctionApproximatorNetwork::new::<1>(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;

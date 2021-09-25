@@ -126,8 +126,8 @@ impl RealTimeNetwork {
     ///     output_activation_types: vec![ActivationType::ReLU],
     ///     ..GeneticConfig::zero()
     /// });
-    /// genome.add_gene(0, 0, 2, 2.5);
-    /// genome.add_gene(1, 1, 2, -2.5);
+    /// genome.add_gene(0, 0, 2, 2.5).unwrap();
+    /// genome.add_gene(1, 1, 2, -2.5).unwrap();
     /// 
     /// let mut network = RealTimeNetwork::new(&genome);
     /// network.set_inputs(&[0.5, 1.0]);
@@ -290,7 +290,7 @@ mod tests {
         config.output_count = NonZeroUsize::new(2).unwrap();
         config.output_activation_types = vec![ActivationType::Sigmoid, ActivationType::Gaussian];
         let mut genome = Genome::new(&config);
-        genome.add_node(4, ActivationType::Sigmoid);
+        genome.add_node(4, ActivationType::Sigmoid).unwrap();
 
         let ids = [0, 2, 6, 7, 3, 5, 4];
         let inputs = [0, 0, 1, 3, 4, 4, 4];
@@ -298,10 +298,10 @@ mod tests {
         let weights = [1.0, 1.0, 2.5, -2.0, -1.0, -1.5, 3.2];
 
         for i in 0..7 {
-            genome.add_gene(ids[i], inputs[i], outputs[i], weights[i]);
+            genome.add_gene(ids[i], inputs[i], outputs[i], weights[i]).unwrap();
         }
         // Suppressed gene shouldn't be expressed in network.
-        genome.add_gene(1, 0, 3, -1.0).set_suppressed(true);
+        genome.add_gene(1, 0, 3, -1.0).unwrap().set_suppressed(true);
 
         let network = RealTimeNetwork::new(&genome);
         assert_eq!(network.input_count, 2);
@@ -343,7 +343,7 @@ mod tests {
     #[test]
     fn activate_single() {
         let mut genome = Genome::new(&GeneticConfig::zero());
-        genome.add_gene(0, 0, 1, 1.0);
+        genome.add_gene(0, 0, 1, 1.0).unwrap();
         let mut network = RealTimeNetwork::new(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
@@ -357,8 +357,8 @@ mod tests {
     #[test]
     fn activate_single_recursive() {
         let mut genome = Genome::new(&GeneticConfig::zero());
-        genome.add_gene(0, 0, 1, 1.0);
-        genome.add_gene(1, 1, 1, -1.0); // Recursive connection
+        genome.add_gene(0, 0, 1, 1.0).unwrap();
+        genome.add_gene(1, 1, 1, -1.0).unwrap(); // Recursive connection
         let mut network = RealTimeNetwork::new(&genome);
         let mut prev_output = 0.0;
         for input in -20..=20 {
@@ -373,9 +373,9 @@ mod tests {
     #[test]
     fn activate_double() {
         let mut genome = Genome::new(&GeneticConfig::zero());
-        genome.add_node(2, ActivationType::Sigmoid);
-        genome.add_gene(0, 0, 2, 1.0);
-        genome.add_gene(1, 2, 1, 1.0);
+        genome.add_node(2, ActivationType::Sigmoid).unwrap();
+        genome.add_gene(0, 0, 2, 1.0).unwrap();
+        genome.add_gene(1, 2, 1, 1.0).unwrap();
         let mut network = RealTimeNetwork::new(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
@@ -392,9 +392,9 @@ mod tests {
         let mut config = GeneticConfig::zero();
         config.input_count = NonZeroUsize::new(3).unwrap();
         let mut genome = Genome::new(&config);
-        genome.add_gene(0, 0, 3, -1.0);
-        genome.add_gene(1, 1, 3, 1.0);
-        genome.add_gene(2, 2, 3, 0.5);
+        genome.add_gene(0, 0, 3, -1.0).unwrap();
+        genome.add_gene(1, 1, 3, 1.0).unwrap();
+        genome.add_gene(2, 2, 3, 0.5).unwrap();
         let mut network = RealTimeNetwork::new(&genome);
         for ((x, y), z) in (-20..=20).zip(-20..=20).zip(-20..=20) {
             let (x, y, z) = (x as f32 / 10.0, y as f32 / 10.0, z as f32 / 10.0);

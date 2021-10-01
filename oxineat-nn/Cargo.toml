@@ -1,0 +1,17 @@
+[package]
+name = "oxineat-nn"
+version = "0.1.0"
+authors = ["Fr4ctlize <fortizk@outlook.com>"]
+edition = "2018"
+license = "MIT"
+description = "A neural-network implementation of the OxiNEAT crate's Genome trait."
+repository = "https://github.com/Fr4ctlize/OxiNEAT"
+documentation = "https://docs.rs/oxineat-nn/"
+readme = "README.md"
+keywords = ["neat", "neural network"]
+
+[dependencies]
+rand = "0.8.3"
+serde = { version = "1.0.129", features = ["derive"] }
+ahash = "0.7.4"
+oxineat = { path = "../oxineat" }

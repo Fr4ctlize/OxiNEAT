@@ -1,28 +1,38 @@
-use super::*;
+use crate::populations::{PopulationConfig, Species, SpeciesID};
+use crate::{Genome, InnovationHistory};
 
 use ahash::RandomState;
 
 use std::collections::HashMap;
 
+use rand::{
+    seq::{IteratorRandom, SliceRandom},
+    Rng,
+};
+
 /// Auxiliary type for offspring generation.
 /// Handles all the tasks of generating a population's
 /// offspring according to the specified configs
 /// and allotted offspring.
-pub(super) struct OffspringFactory<'a> {
-    species: &'a [Species],
-    history: &'a mut History,
-    genetic_config: &'a GeneticConfig,
+pub(super) struct OffspringFactory<'a, C, H, G> {
+    species: &'a [Species<G>],
+    history: &'a mut H,
+    genetic_config: &'a C,
     population_config: &'a PopulationConfig,
 }
 
-impl<'a> OffspringFactory<'a> {
+impl<'a, C, H, G> OffspringFactory<'a, C, H, G>
+where
+    H: InnovationHistory,
+    G: Genome<InnovationHistory = H, Config = C> + Clone,
+{
     /// Create a new offspring factory.
     pub(super) fn new(
-        species: &'a [Species],
-        history: &'a mut History,
-        genetic_config: &'a GeneticConfig,
+        species: &'a [Species<G>],
+        history: &'a mut H,
+        genetic_config: &'a C,
         population_config: &'a PopulationConfig,
-    ) -> OffspringFactory<'a> {
+    ) -> OffspringFactory<'a, C, H, G> {
         OffspringFactory {
             species,
             history,
@@ -35,7 +45,7 @@ impl<'a> OffspringFactory<'a> {
     pub(super) fn generate_offspring(
         &mut self,
         allotted_offspring: &[usize],
-    ) -> HashMap<SpeciesID, Vec<Genome>, RandomState> {
+    ) -> HashMap<SpeciesID, Vec<G>, RandomState> {
         let mut offspring_of_species = self
             .species
             .iter()
@@ -61,7 +71,7 @@ impl<'a> OffspringFactory<'a> {
     /// to the offspring.
     fn add_species_elite(
         &mut self,
-        offpring_map: &mut HashMap<SpeciesID, Vec<Genome>, RandomState>,
+        offpring_map: &mut HashMap<SpeciesID, Vec<G>, RandomState>,
         species_index: usize,
         elite: usize,
     ) {
@@ -78,7 +88,7 @@ impl<'a> OffspringFactory<'a> {
     fn add_mated_offspring(
         &mut self,
         offspring: usize,
-        species_offspring: &mut HashMap<SpeciesID, Vec<Genome>, RandomState>,
+        species_offspring: &mut HashMap<SpeciesID, Vec<G>, RandomState>,
         species_index: usize,
     ) {
         // We need to get the species this way to avoid
@@ -87,7 +97,7 @@ impl<'a> OffspringFactory<'a> {
         // self.history.
         let species = &self.species[species_index];
         let survivors = species.count_survivors(self.population_config);
-        let eligible_parents: Vec<&Genome> = species.genomes[..survivors].iter().collect();
+        let eligible_parents: Vec<&G> = species.genomes[..survivors].iter().collect();
         let mut rng = rand::thread_rng();
         // Mate parents
         for _ in 0..offspring {
@@ -111,7 +121,7 @@ impl<'a> OffspringFactory<'a> {
                 .push(Genome::mate(
                     parent1,
                     parent2,
-                    &mut self.history,
+                    self.history,
                     self.genetic_config,
                 ));
         }
@@ -120,10 +130,10 @@ impl<'a> OffspringFactory<'a> {
     /// Choose a parent from the currents species,
     /// or from another randomly selected.
     fn choose_second_parent(
-        current_species: &'a Species,
-        all_species: &'a [Species],
+        current_species: &'a Species<G>,
+        all_species: &'a [Species<G>],
         population_config: &PopulationConfig,
-    ) -> (SpeciesID, &'a Genome) {
+    ) -> (SpeciesID, &'a G) {
         let mut rng = rand::thread_rng();
 
         if all_species.len() > 1 && rng.gen::<f32>() < population_config.interspecies_mating_chance

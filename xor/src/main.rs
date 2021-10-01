@@ -1,6 +1,7 @@
-use oxineat::genomics::{ActivationType, Genome, GeneticConfig};
-use oxineat::networks::FunctionApproximatorNetwork;
+use oxineat_nn::genomics::{ActivationType, NNGenome, GeneticConfig};
+use oxineat_nn::networks::FunctionApproximatorNetwork;
 use oxineat::populations::{Population, PopulationConfig, Stats};
+use oxineat::Genome;
 // use neat::populations::{EvolutionLogger, ReportingLevel};
 
 use std::num::NonZeroUsize;
@@ -10,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 const ERROR_MARGIN: f32 = 0.3;
 
-fn evaluate_xor(genome: &Genome) -> f32 {
+fn evaluate_xor(genome: &NNGenome) -> f32 {
     let mut network = FunctionApproximatorNetwork::new::<1>(genome);
 
     let values = [

@@ -8,4 +8,5 @@ edition = "2018"
 
 [dependencies]
 oxineat = { path = "../oxineat" }
+oxineat-nn = { path = "../oxineat-nn" }
 rayon = "1.5.1"

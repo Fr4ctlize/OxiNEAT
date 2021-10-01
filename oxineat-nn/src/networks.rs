@@ -15,7 +15,7 @@ mod function_approximator;
 
 pub use function_approximator::FunctionApproximatorNetwork;
 
-use crate::genomics::{ActivationType, Genome, NodeType};
+use crate::genomics::{ActivationType, NNGenome, NodeType};
 use crate::Innovation;
 use connection::Connection;
 
@@ -57,7 +57,7 @@ impl RealTimeNetwork {
     /// 
     /// let network = RealTimeNetwork::new(&genome);
     /// ```
-    pub fn new(genome: &Genome) -> RealTimeNetwork {
+    pub fn new(genome: &NNGenome) -> RealTimeNetwork {
         let mut input_nodes = vec![];
         let mut output_nodes = vec![];
         let mut hidden_nodes = vec![];
@@ -278,6 +278,7 @@ mod tests {
     use super::*;
     use crate::genomics::{ActivationType, GeneticConfig};
     use std::num::NonZeroUsize;
+    use oxineat::Genome;
 
     fn sigmoid(x: f32) -> f32 {
         1.0 / (1.0 + (-4.9 * x).exp())
@@ -289,7 +290,7 @@ mod tests {
         config.input_count = NonZeroUsize::new(2).unwrap();
         config.output_count = NonZeroUsize::new(2).unwrap();
         config.output_activation_types = vec![ActivationType::Sigmoid, ActivationType::Gaussian];
-        let mut genome = Genome::new(&config);
+        let mut genome = NNGenome::new(&config);
         genome.add_node(4, ActivationType::Sigmoid).unwrap();
 
         let ids = [0, 2, 6, 7, 3, 5, 4];
@@ -332,7 +333,7 @@ mod tests {
 
     #[test]
     fn activate_empty() {
-        let genome = Genome::new(&GeneticConfig::zero());
+        let genome = NNGenome::new(&GeneticConfig::zero());
         let mut network = RealTimeNetwork::new(&genome);
         assert!((0..100).all(|_| {
             network.activate();
@@ -342,7 +343,7 @@ mod tests {
 
     #[test]
     fn activate_single() {
-        let mut genome = Genome::new(&GeneticConfig::zero());
+        let mut genome = NNGenome::new(&GeneticConfig::zero());
         genome.add_gene(0, 0, 1, 1.0).unwrap();
         let mut network = RealTimeNetwork::new(&genome);
         for input in -20..=20 {
@@ -356,7 +357,7 @@ mod tests {
 
     #[test]
     fn activate_single_recursive() {
-        let mut genome = Genome::new(&GeneticConfig::zero());
+        let mut genome = NNGenome::new(&GeneticConfig::zero());
         genome.add_gene(0, 0, 1, 1.0).unwrap();
         genome.add_gene(1, 1, 1, -1.0).unwrap(); // Recursive connection
         let mut network = RealTimeNetwork::new(&genome);
@@ -372,7 +373,7 @@ mod tests {
 
     #[test]
     fn activate_double() {
-        let mut genome = Genome::new(&GeneticConfig::zero());
+        let mut genome = NNGenome::new(&GeneticConfig::zero());
         genome.add_node(2, ActivationType::Sigmoid).unwrap();
         genome.add_gene(0, 0, 2, 1.0).unwrap();
         genome.add_gene(1, 2, 1, 1.0).unwrap();
@@ -391,7 +392,7 @@ mod tests {
     fn activate_multiple_inputs() {
         let mut config = GeneticConfig::zero();
         config.input_count = NonZeroUsize::new(3).unwrap();
-        let mut genome = Genome::new(&config);
+        let mut genome = NNGenome::new(&config);
         genome.add_gene(0, 0, 3, -1.0).unwrap();
         genome.add_gene(1, 1, 3, 1.0).unwrap();
         genome.add_gene(2, 2, 3, 0.5).unwrap();

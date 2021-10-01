@@ -1,5 +1,5 @@
-use super::PopulationConfig;
-use crate::genomics::{GeneticConfig, Genome};
+use crate::populations::PopulationConfig;
+use crate::Genome;
 
 /// Species identifier. Specifies
 /// the generation in which the species
@@ -27,15 +27,15 @@ pub struct SpeciesID(pub usize, pub usize);
 /// [genetic distance]: PopulationConfig::distance_threshold
 /// [`stagnation_threshold`]: PopulationConfig::survival_threshold
 #[derive(Debug, Clone)]
-pub struct Species {
+pub struct Species<G> {
     id: SpeciesID,
-    pub(super) genomes: Vec<Genome>,
-    representative: Genome,
+    pub(super) genomes: Vec<G>,
+    representative: G,
     stagnation: usize,
     max_fitness: f32,
 }
 
-impl Species {
+impl<G: Genome + Clone> Species<G> {
     /// Creates a new species with the specified ID and
     /// representative. The representative is also added
     /// to the species' genome pool.
@@ -50,7 +50,7 @@ impl Species {
     ///     Genome::new(&GeneticConfig::zero()),
     /// );
     /// ```
-    pub fn new(id: SpeciesID, representative: Genome) -> Species {
+    pub fn new(id: SpeciesID, representative: G) -> Species<G> {
         Species {
             id,
             genomes: vec![representative.clone()],
@@ -93,7 +93,7 @@ impl Species {
     ///
     /// assert_eq!(species.representative(), &representative);
     /// ```
-    pub fn representative(&self) -> &Genome {
+    pub fn representative(&self) -> &G {
         &self.representative
     }
 
@@ -119,8 +119,11 @@ impl Species {
     ///
     /// assert_eq!(species.genetic_distance(&representative, &config), 0.0);
     /// ```
-    pub fn genetic_distance(&self, other: &Genome, config: &GeneticConfig) -> f32 {
-        Genome::genetic_distance(&self.representative, other, config)
+    pub fn genetic_distance<C>(&self, other: &G, config: &C) -> f32
+    where
+        G: Genome<Config = C>,
+    {
+        G::genetic_distance(&self.representative, other, config)
     }
 
     /// Adds a genome to the species.
@@ -140,7 +143,7 @@ impl Species {
     ///
     /// assert!(species.genomes().find(|g| *g == &genome).is_some());
     /// ```
-    pub fn add_genome(&mut self, genome: Genome) {
+    pub fn add_genome(&mut self, genome: G) {
         self.genomes.push(genome);
     }
 
@@ -150,7 +153,7 @@ impl Species {
         let max_fitness = self
             .genomes
             .iter()
-            .map(|g| g.fitness)
+            .map(|g| g.fitness())
             .max_by(|a, b| {
                 a.partial_cmp(b)
                     .unwrap_or_else(|| panic!("uncomparable fitness value detected"))
@@ -165,12 +168,12 @@ impl Species {
     /// Returns the species' _member-count adjusted_
     /// fitness. I.e., the average of the species'
     /// genome's fitnesses.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use oxineat::populations::{SpeciesID, Species};
-    /// 
+    ///
     /// let config = GeneticConfig::zero();
     /// let mut species = Species::new(
     ///     SpeciesID(1, 0),
@@ -183,28 +186,28 @@ impl Species {
     /// g2.set_fitness(30.0);
     /// species.add_genome(g1);
     /// species.add_genome(g2);
-    /// 
+    ///
     /// // The species representative + `g1` and `g2`.
     /// assert_eq!(species.adjusted_fitness(), (0.0 + 20.0 + 30.0) / 3.0);
     /// ```
     pub fn adjusted_fitness(&self) -> f32 {
-        self.genomes.iter().map(|g| g.fitness).sum::<f32>() / self.genomes.len() as f32
+        self.genomes.iter().map(|g| g.fitness()).sum::<f32>() / self.genomes.len() as f32
     }
 
     /// Returns the number of generations the species
     /// has been stagnated.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use oxineat::populations::{SpeciesID, Species};
-    /// 
+    ///
     /// let config = GeneticConfig::zero();
     /// let species = Species::new(
     ///     SpeciesID(1, 0),
     ///     Genome::new(&config),
     /// );
-    /// 
+    ///
     /// println!("{}", species.time_stagnated());
     /// ```
     pub fn time_stagnated(&self) -> usize {
@@ -212,57 +215,57 @@ impl Species {
     }
 
     /// Returns an iterator over the species' members.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use oxineat::populations::{SpeciesID, Species};
-    /// 
+    ///
     /// let config = GeneticConfig::zero();
     /// let mut species = Species::new(
     ///     SpeciesID(1, 0),
     ///     Genome::new(&config),
     /// );
-    /// 
+    ///
     /// for g in species.genomes() {
     ///     println!("{}", g);
     /// }
     /// ```
-    pub fn genomes(&self) -> impl Iterator<Item = &Genome> {
+    pub fn genomes(&self) -> impl Iterator<Item = &G> {
         self.genomes.iter()
     }
 
     /// Returns the currently best-performing genome.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat::genomics::{GeneticConfig, Genome};
     /// use oxineat::populations::{SpeciesID, Species};
-    /// 
+    ///
     /// let config = GeneticConfig::zero();
-    /// 
+    ///
     /// let mut g1 = Genome::new(&config);
     /// let mut g2 = Genome::new(&config);
     /// let mut g3 = Genome::new(&config);
     /// g1.set_fitness(5.0);
     /// g2.set_fitness(20.0);
     /// g3.set_fitness(10.0);
-    /// 
+    ///
     /// let mut species = Species::new(
     ///     SpeciesID(1, 0),
     ///     g1,
     /// );
     /// species.add_genome(g2.clone());
     /// species.add_genome(g3);
-    /// 
+    ///
     /// assert_eq!(species.champion(), &g2);
     /// ```
-    pub fn champion(&self) -> &Genome {
+    pub fn champion(&self) -> &G {
         self.genomes
             .iter()
             .max_by(|g1, g2| {
-                g1.fitness
-                    .partial_cmp(&g2.fitness)
+                g1.fitness()
+                    .partial_cmp(&g2.fitness())
                     .unwrap_or_else(|| panic!("uncomparable fitness value detected"))
             })
             .expect("empty species has no champion")

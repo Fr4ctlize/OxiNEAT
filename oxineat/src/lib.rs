@@ -19,9 +19,11 @@
 //! 
 //! ```
 //! use oxineat::{
+//!     populations::{Population, PopulationConfig},
+//! };
+//! use oxineat_default::{
 //!     genomics::{ActivationType, GeneticConfig, Genome},
 //!     networks::FunctionApproximatorNetwork,
-//!     populations::{Population, PopulationConfig},
 //! };
 //! use std::num::NonZeroUsize;
 //! 
@@ -100,11 +102,7 @@
 //! }
 //! ```
 
-pub mod genomics;
-pub mod networks;
 pub mod populations;
+mod genome;
 
-/// Identifier type used to designate historically
-/// identical mutations for the purposes of
-/// genome comparison and genetic tracking.
-pub type Innovation = usize;
+pub use genome::*;

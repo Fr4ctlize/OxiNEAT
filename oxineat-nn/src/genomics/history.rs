@@ -2,6 +2,7 @@ use crate::genomics::GeneticConfig;
 use crate::Innovation;
 
 use ahash::RandomState;
+use oxineat::InnovationHistory;
 
 use std::collections::hash_map::{Entry, HashMap};
 
@@ -26,7 +27,9 @@ pub struct History {
     node_innovations: HashMap<Innovation, (Innovation, Innovation, Innovation), RandomState>,
 }
 
-impl History {
+impl InnovationHistory for History {
+    type Config = GeneticConfig;
+
     /// Creates a new History using the specified configuration.
     ///
     /// Initially generated genes are given the innovation number
@@ -41,7 +44,7 @@ impl History {
     ///
     /// let history = History::new(&GeneticConfig::zero());
     /// ```
-    pub fn new(config: &GeneticConfig) -> History {
+    fn new(config: &GeneticConfig) -> History {
         let (gene_innovations, gene_endpoints) = (0..config.input_count.get())
             // Cartesian product of input and outputs...
             .flat_map(|i| (0..config.output_count.get()).map(move |o| (i, o)))
@@ -60,7 +63,9 @@ impl History {
             node_innovations: HashMap::default(),
         }
     }
+}
 
+impl History {
     /// Returns the next gene innovation number, or the
     /// previously assigned number to the same gene mutation.
     pub(crate) fn next_gene_innovation(

@@ -2,6 +2,7 @@
 
 members = [
     "oxineat",
+    "oxineat-nn",
     "hyperneat",
     "xor"
 ]

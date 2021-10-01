@@ -1,5 +1,5 @@
 use super::RealTimeNetwork;
-use crate::genomics::Genome;
+use crate::genomics::NNGenome;
 
 /// A neural network best suited for function
 /// approximation.
@@ -18,7 +18,7 @@ impl FunctionApproximatorNetwork {
     /// effectively disable the entire network, 1 will dissallow
     /// any cycles, 2 will allow single pass through the longest
     /// cycle in the network, etc.
-    /// 
+    ///
     /// # Complexity
     /// This function has `O(d^(n × MAX_NODE_VISITS))` time complexity,
     /// and `O(n × MAX_NODE_VISITS)` space complexity,
@@ -32,7 +32,7 @@ impl FunctionApproximatorNetwork {
     /// let genome = Genome::new(&GeneticConfig::zero());
     /// let network = FunctionApproximatorNetwork::new::<1>(&genome);
     /// ````
-    pub fn new<const MAX_NODE_VISITS: u8>(genome: &Genome) -> FunctionApproximatorNetwork {
+    pub fn new<const MAX_NODE_VISITS: u8>(genome: &NNGenome) -> FunctionApproximatorNetwork {
         let network = RealTimeNetwork::new(genome);
         let depth = (0..network.input_count)
             .map(|root| {
@@ -52,7 +52,7 @@ impl FunctionApproximatorNetwork {
     /// Calculates the length of the longest path
     /// from the `root` node that doesn't pass through
     /// any node more than `MAX_NODE_VISITS` times.
-    /// 
+    ///
     /// # Complexity
     /// This function has `O(d^(n × MAX_NODE_VISITS))` time complexity,
     /// and `O(n × MAX_NODE_VISITS)` space complexity,
@@ -94,7 +94,7 @@ impl FunctionApproximatorNetwork {
     /// ```
     /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome};
     /// use oxineat::networks::FunctionApproximatorNetwork;
-    /// 
+    ///
     /// fn sigmoid(x: f32) -> f32 {
     ///     1.0 / (1.0 + (-4.9 * x).exp())
     /// }
@@ -104,7 +104,7 @@ impl FunctionApproximatorNetwork {
     /// genome.add_gene(0, 0, 2, 1.0).unwrap();
     /// genome.add_gene(1, 2, 1, 1.0).unwrap();
     /// let mut network = FunctionApproximatorNetwork::new::<1>(&genome);
-    /// 
+    ///
     /// for input in -20..=20 {
     ///     let input = input as f32 / 10.0;
     ///     assert_eq!(network.evaluate_at(&[input])[0], sigmoid(sigmoid(input)));
@@ -124,13 +124,14 @@ impl FunctionApproximatorNetwork {
 mod test {
     use super::*;
     use crate::genomics::{ActivationType, GeneticConfig};
+    use oxineat::Genome;
 
     fn sigmoid(x: f32) -> f32 {
         1.0 / (1.0 + (-4.9 * x).exp())
     }
 
-    fn test_genome() -> Genome {
-        let mut genome = Genome::new(&GeneticConfig::zero());
+    fn test_genome() -> NNGenome {
+        let mut genome = NNGenome::new(&GeneticConfig::zero());
         genome.add_node(2, ActivationType::Sigmoid).unwrap();
         genome.add_gene(0, 0, 1, 0.0).unwrap();
         genome.add_gene(1, 0, 2, 0.0).unwrap();
@@ -167,7 +168,7 @@ mod test {
 
     #[test]
     fn evaluate_at() {
-        let mut genome = Genome::new(&GeneticConfig::zero());
+        let mut genome = NNGenome::new(&GeneticConfig::zero());
         genome.add_node(2, ActivationType::Sigmoid).unwrap();
         genome.add_gene(0, 0, 2, 1.0).unwrap();
         genome.add_gene(1, 2, 1, 1.0).unwrap();

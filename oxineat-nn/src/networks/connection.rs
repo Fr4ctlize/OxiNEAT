@@ -1,7 +1,7 @@
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq)]
-pub struct Connection {
+pub(crate) struct Connection {
     pub output: usize,
     pub weight: f32,
 }

@@ -1,4 +1,4 @@
-use super::{AbsentEntryRemoval, GeneValidityError};
+use crate::genomics::errors::{AbsentEntryRemoval, GeneValidityError};
 use crate::Innovation;
 
 use ahash::RandomState;
@@ -55,7 +55,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// ```
@@ -78,7 +78,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     ///
@@ -105,7 +105,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     ///
@@ -135,7 +135,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     ///
@@ -162,7 +162,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     ///
@@ -187,7 +187,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     ///
@@ -201,7 +201,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// node.add_input_gene(0);
@@ -220,7 +220,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let mut node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     /// node.add_output_gene(0);
@@ -239,7 +239,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     ///
@@ -253,7 +253,7 @@ impl Node {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Node, NodeType, ActivationType};
+    /// use oxineat_nn::genomics::{Node, NodeType, ActivationType};
     ///
     /// let node = Node::new(5, NodeType::Neuron, ActivationType::Sigmoid);
     ///

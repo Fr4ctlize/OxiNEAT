@@ -30,6 +30,12 @@ pub struct History {
 impl InnovationHistory for History {
     type Config = GeneticConfig;
 
+    fn new(config: &GeneticConfig) -> History {
+        Self::new(config)
+    }
+}
+
+impl History {
     /// Creates a new History using the specified configuration.
     ///
     /// Initially generated genes are given the innovation number
@@ -40,11 +46,11 @@ impl InnovationHistory for History {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, History};
+    /// use oxineat_nn::genomics::{GeneticConfig, History};
     ///
     /// let history = History::new(&GeneticConfig::zero());
     /// ```
-    fn new(config: &GeneticConfig) -> History {
+    pub fn new(config: &GeneticConfig) -> History {
         let (gene_innovations, gene_endpoints) = (0..config.input_count.get())
             // Cartesian product of input and outputs...
             .flat_map(|i| (0..config.output_count.get()).map(move |o| (i, o)))
@@ -63,9 +69,7 @@ impl InnovationHistory for History {
             node_innovations: HashMap::default(),
         }
     }
-}
 
-impl History {
     /// Returns the next gene innovation number, or the
     /// previously assigned number to the same gene mutation.
     pub(crate) fn next_gene_innovation(
@@ -165,7 +169,7 @@ impl History {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, History};
+    /// use oxineat_nn::genomics::{GeneticConfig, History};
     ///
     /// let history = History::new(&GeneticConfig::zero());
     ///
@@ -179,7 +183,7 @@ impl History {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, History};
+    /// use oxineat_nn::genomics::{GeneticConfig, History};
     ///
     /// let history = History::new(&GeneticConfig::zero());
     ///
@@ -196,7 +200,7 @@ impl History {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History};
+    /// use oxineat_nn::genomics::{GeneticConfig, History, NNGenome};
     ///
     /// let config = GeneticConfig {
     ///     initial_expression_chance: 1.0,
@@ -204,7 +208,9 @@ impl History {
     ///     ..GeneticConfig::zero()
     /// };
     /// let mut history = History::new(&config);
-    /// Genome::new(&config).mutate_add_gene(&mut history, &config);
+    /// 
+    /// // Add mutations to the history through genome mutation.
+    /// NNGenome::new(&config).mutate_add_gene(&mut history, &config);
     ///
     /// for ((input_node, output_node), gene) in history.gene_innovation_history() {
     ///     println!("gene innovation with id {} from node {} to node {}",
@@ -224,14 +230,16 @@ impl History {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome, History};
+    /// use oxineat_nn::genomics::{GeneticConfig, History, NNGenome};
     ///
     /// let config = GeneticConfig {
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// };
     /// let mut history = History::new(&config);
-    /// Genome::new(&config).mutate_add_node(&mut history, &config);
+    /// 
+    /// // Add mutations to the history through genome mutation.
+    /// NNGenome::new(&config).mutate_add_node(&mut history, &config);
     ///
     /// for (split_gene, (input_gene, new_node, output_gene)) in history.node_innovation_history() {
     ///     println!("gene {} split into genes {} and {} with node {} in between",

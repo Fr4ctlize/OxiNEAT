@@ -85,13 +85,14 @@ impl GeneticConfig {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
+    /// use oxineat_nn::genomics::GeneticConfig;
     ///
     /// let cfg1 = GeneticConfig::zero();
     ///
     /// let cfg2 = GeneticConfig {
     ///     // Specify some values here...
     ///     recursion_chance: 1.0,
+    ///     child_mutation_chance: 1.0,
     ///     // Default the rest...
     ///     ..GeneticConfig::zero()
     /// };

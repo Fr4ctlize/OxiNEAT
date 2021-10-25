@@ -23,7 +23,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// ```
@@ -50,23 +50,23 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Gene, GeneticConfig};
+    /// use oxineat_nn::genomics::{Gene, GeneticConfig};
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
     /// 
-    /// assert_eq!(gene.weight(), 2.0);
+    /// # assert_eq!(gene.weight(), 2.0);
     /// 
     /// gene.randomize_weight(&GeneticConfig {
     ///     weight_bound: 5.0,
     ///     ..GeneticConfig::zero()
     /// });
     /// 
-    /// // The weight should change to a random value
-    /// // in the [-5.0, 5.0] range.
-    /// // NOTE: it is possible for the new value to
-    /// // be the same as the old, depending on RNG seed.
-    /// assert_ne!(gene.weight(), 2.0);
-    /// assert!(gene.weight().abs() <= 5.0);
+    /// # // The weight should change to a random value
+    /// # // in the [-5.0, 5.0] range.
+    /// # // NOTE: it is possible for the new value to
+    /// # // be the same as the old, depending on RNG seed.
+    /// # assert_ne!(gene.weight(), 2.0);
+    /// # assert!(gene.weight().abs() <= 5.0);
     /// ```
     pub fn randomize_weight(&mut self, config: &GeneticConfig) {
         self.weight = Self::random_weight(config);
@@ -83,11 +83,11 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Gene, GeneticConfig};
+    /// use oxineat_nn::genomics::{Gene, GeneticConfig};
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 3.0);
     /// 
-    /// assert_eq!(gene.weight(), 3.0);
+    /// # assert_eq!(gene.weight(), 3.0);
     /// 
     /// gene.nudge_weight(&GeneticConfig {
     ///     weight_mutation_power: 2.5,
@@ -95,13 +95,13 @@ impl Gene {
     ///     ..GeneticConfig::zero()
     /// });
     /// 
-    /// // The weight should be nudged by a random value
-    /// // in the [-2.5, 2.5] range, and clamped into [-5.0, 5.0].
-    /// // NOTE: it is possible for the new value to be the
-    /// // same as the old, depending on RNG seed.
-    /// assert_ne!(gene.weight(), 3.0);
-    /// assert!((gene.weight() - 3.0).abs() <= 2.5);
-    /// assert!(gene.weight().abs() <= 5.0);
+    /// # // The weight should be nudged by a random value
+    /// # // in the [-2.5, 2.5] range, and clamped into [-5.0, 5.0].
+    /// # // NOTE: it is possible for the new value to be the
+    /// # // same as the old, depending on RNG seed.
+    /// # assert_ne!(gene.weight(), 3.0);
+    /// # assert!((gene.weight() - 3.0).abs() <= 2.5);
+    /// # assert!(gene.weight().abs() <= 5.0);
     /// ```
     pub fn nudge_weight(&mut self, config: &GeneticConfig) {
         self.weight +=
@@ -113,7 +113,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -127,7 +127,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -141,7 +141,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -155,7 +155,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -169,7 +169,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -187,7 +187,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// 
@@ -201,7 +201,7 @@ impl Gene {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::Gene;
+    /// use oxineat_nn::genomics::Gene;
     /// 
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
     /// 

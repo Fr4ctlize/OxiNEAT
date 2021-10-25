@@ -26,14 +26,14 @@ impl FunctionApproximatorNetwork {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat_nn::networks::FunctionApproximatorNetwork;
     ///
-    /// let genome = Genome::new(&GeneticConfig::zero());
-    /// let network = FunctionApproximatorNetwork::new::<1>(&genome);
+    /// let genome = NNGenome::new(&GeneticConfig::zero());
+    /// let network = FunctionApproximatorNetwork::from::<1>(&genome);
     /// ````
-    pub fn new<const MAX_NODE_VISITS: u8>(genome: &NNGenome) -> FunctionApproximatorNetwork {
-        let network = RealTimeNetwork::new(genome);
+    pub fn from<const MAX_NODE_VISITS: u8>(genome: &NNGenome) -> FunctionApproximatorNetwork {
+        let network = RealTimeNetwork::from(genome);
         let depth = (0..network.input_count)
             .map(|root| {
                 Self::calculate_depth::<MAX_NODE_VISITS>(
@@ -92,19 +92,21 @@ impl FunctionApproximatorNetwork {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome};
-    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, NNGenome};
+    /// use oxineat_nn::networks::FunctionApproximatorNetwork;
     ///
     /// fn sigmoid(x: f32) -> f32 {
     ///     1.0 / (1.0 + (-4.9 * x).exp())
     /// }
     ///
-    /// let mut genome = Genome::new(&GeneticConfig::zero());
+    /// // Create a network with a two sigmoid nodes.
+    /// let mut genome = NNGenome::new(&GeneticConfig::zero());
     /// genome.add_node(2, ActivationType::Sigmoid).unwrap();
     /// genome.add_gene(0, 0, 2, 1.0).unwrap();
     /// genome.add_gene(1, 2, 1, 1.0).unwrap();
-    /// let mut network = FunctionApproximatorNetwork::new::<1>(&genome);
+    /// let mut network = FunctionApproximatorNetwork::from::<1>(&genome);
     ///
+    /// // The result is identical to double application of a sigmoid function.
     /// for input in -20..=20 {
     ///     let input = input as f32 / 10.0;
     ///     assert_eq!(network.evaluate_at(&[input])[0], sigmoid(sigmoid(input)));
@@ -124,7 +126,6 @@ impl FunctionApproximatorNetwork {
 mod test {
     use super::*;
     use crate::genomics::{ActivationType, GeneticConfig};
-    use oxineat::Genome;
 
     fn sigmoid(x: f32) -> f32 {
         1.0 / (1.0 + (-4.9 * x).exp())
@@ -144,25 +145,25 @@ mod test {
 
     #[test]
     fn max_visits_0() {
-        let network = FunctionApproximatorNetwork::new::<0>(&test_genome());
+        let network = FunctionApproximatorNetwork::from::<0>(&test_genome());
         assert_eq!(network.depth, 0)
     }
 
     #[test]
     fn max_visits_1() {
-        let network = FunctionApproximatorNetwork::new::<1>(&test_genome());
+        let network = FunctionApproximatorNetwork::from::<1>(&test_genome());
         assert_eq!(network.depth, 2)
     }
 
     #[test]
     fn max_visits_2() {
-        let network = FunctionApproximatorNetwork::new::<2>(&test_genome());
+        let network = FunctionApproximatorNetwork::from::<2>(&test_genome());
         assert_eq!(network.depth, 4)
     }
 
     #[test]
     fn max_visits_3() {
-        let network = FunctionApproximatorNetwork::new::<3>(&test_genome());
+        let network = FunctionApproximatorNetwork::from::<3>(&test_genome());
         assert_eq!(network.depth, 6)
     }
 
@@ -172,7 +173,7 @@ mod test {
         genome.add_node(2, ActivationType::Sigmoid).unwrap();
         genome.add_gene(0, 0, 2, 1.0).unwrap();
         genome.add_gene(1, 2, 1, 1.0).unwrap();
-        let mut network = FunctionApproximatorNetwork::new::<1>(&genome);
+        let mut network = FunctionApproximatorNetwork::from::<1>(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
             assert_eq!(network.evaluate_at(&[input])[0], sigmoid(sigmoid(input)));

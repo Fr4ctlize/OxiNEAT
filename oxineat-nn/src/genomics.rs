@@ -1,7 +1,8 @@
-//! Genomes are the focus of evolution in NEAT.
-//! They are a collection of genes and nodes that can be instantiated
-//! as a phenotype (a neural network). Genomes can be progressively mutated,
-//! thus adding complexity and functionality.
+//! This implementation of the `Genome` trait is a collection of genes and
+//! nodes that can be instantiated as a phenotype (a neural network). [`NNGenomes`]
+//! can be progressively mutated, thus adding complexity and functionality.
+//! 
+//! [`NNGenomes`]: crate::genomics::NNGenome
 
 mod config;
 mod errors;
@@ -42,6 +43,33 @@ impl Genome for NNGenome {
     type InnovationHistory = History;
     type Config = GeneticConfig;
 
+    fn new(config: &GeneticConfig) -> NNGenome {
+        NNGenome::new(config)
+    }
+
+    fn genetic_distance(first: &NNGenome, second: &NNGenome, config: &GeneticConfig) -> f32 {
+        NNGenome::genetic_distance(first, second, config)
+    }
+
+    fn mate(
+        parent1: &NNGenome,
+        parent2: &NNGenome,
+        history: &mut History,
+        config: &GeneticConfig,
+    ) -> NNGenome {
+        NNGenome::mate(parent1, parent2, history, config)
+    }
+
+    fn set_fitness(&mut self, fitness: f32) {
+        self.set_fitness(fitness)
+    }
+
+    fn fitness(&self) -> f32 {
+        self.fitness()
+    }
+}
+
+impl NNGenome {
     /// Create a new genome with the specified configuration.
     ///
     /// Initially generated genes are given the innovation number
@@ -52,10 +80,11 @@ impl Genome for NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, NodeType};
-    /// use std::num::NonZeroUsize;
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, NNGenome, NodeType};
+    /// # use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
+    ///     // Some config...
     ///     input_count: NonZeroUsize::new(3).unwrap(),
     ///     output_count: NonZeroUsize::new(2).unwrap(),
     ///     initial_expression_chance: 1.0,
@@ -63,7 +92,7 @@ impl Genome for NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let genome = Genome::new(&config);
+    /// let genome = NNGenome::new(&config);
     ///
     /// // As configured, the genome should have 3 sensors + 2 actuators.
     /// assert_eq!(genome.nodes().count(), 3 + 2);
@@ -79,7 +108,7 @@ impl Genome for NNGenome {
     /// // All genes should have innovation numbers in the range (0..6)
     /// assert!(genome.genes().all(|g| (0..3 * 2).contains(&g.innovation())));
     /// ```
-    fn new(config: &GeneticConfig) -> NNGenome {
+    pub fn new(config: &GeneticConfig) -> NNGenome {
         let mut nodes = Self::generate_input_output_nodes(config);
         let (genes, node_pairings) = Self::generate_initial_genes(&mut nodes, config);
 
@@ -91,209 +120,6 @@ impl Genome for NNGenome {
         }
     }
 
-    /// Calculates the _genetic distance_ between `self` and `other`,
-    /// weighting node and weight differences as specified in `config`.
-    ///
-    /// # Examples
-    /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History};
-    /// use std::num::NonZeroUsize;
-    ///
-    /// // Completely arbitrary quantities.
-    /// const EXCESS_FACTOR: f32 = 1.5;
-    /// const DISJOINT_FACTOR: f32 = 0.5;
-    /// const WEIGHT_FACTOR: f32 = 0.333;
-    ///
-    /// let config = GeneticConfig {
-    ///     input_count: NonZeroUsize::new(2).unwrap(),
-    ///     output_count: NonZeroUsize::new(1).unwrap(),
-    ///     activation_types: vec![ActivationType::Sigmoid],
-    ///     initial_expression_chance: 0.0,
-    ///     excess_gene_factor: EXCESS_FACTOR,
-    ///     disjoint_gene_factor: DISJOINT_FACTOR,
-    ///     common_weight_factor: WEIGHT_FACTOR,
-    ///     ..GeneticConfig::zero()
-    /// };
-    ///
-    /// let mut genome1 = Genome::new(&config);
-    /// let mut genome2 = Genome::new(&config);
-    ///
-    /// genome1.add_node(3, ActivationType::Sigmoid).unwrap();
-    /// genome2.add_node(3, ActivationType::Sigmoid).unwrap();
-    ///
-    /// // Common gene, weight difference of 2.0.
-    /// genome1.add_gene(0, 0, 2, 1.0).unwrap();
-    /// genome2.add_gene(0, 0, 2, -1.0).unwrap();
-    ///
-    /// // Disjoint genes.
-    /// genome1.add_gene(1, 1, 2, 3.0).unwrap();
-    /// genome2.add_gene(2, 1, 3, 1.0).unwrap();
-    ///
-    /// // Common gene, weight_difference of 0.0.
-    /// genome1.add_gene(3, 2, 3, 1.0).unwrap();
-    /// genome2.add_gene(3, 2, 3, 1.0).unwrap();
-    ///
-    /// // Excess gene.
-    /// genome1.add_gene(4, 2, 2, 3.0).unwrap();
-    ///
-    /// assert_eq!(
-    ///     Genome::genetic_distance(&genome1, &genome2, &config),
-    ///     DISJOINT_FACTOR * (1 + 1) as f32 +
-    ///         EXCESS_FACTOR * (1) as f32 +
-    ///         WEIGHT_FACTOR * (2.0 + 0.0) / 2.0  // Divide by number of common genes to get average.
-    /// );
-    /// ```
-    fn genetic_distance(first: &NNGenome, second: &NNGenome, config: &GeneticConfig) -> f32 {
-        let (common_innovations, common_weight_pairs) =
-            Self::common_innovations_and_weights(first, second);
-
-        let common_weight_diff = Self::weight_diff_average(&common_weight_pairs);
-
-        let disjoint_gene_count_self = first.count_disjoint_genes(&common_innovations);
-        let disjoint_gene_count_other = second.count_disjoint_genes(&common_innovations);
-        let disjoint_gene_count = disjoint_gene_count_self + disjoint_gene_count_other;
-
-        let excess_gene_count =
-            (first.genes.len() - common_innovations.len() - disjoint_gene_count_self)
-                + (second.genes.len() - common_innovations.len() - disjoint_gene_count_other);
-
-        config.disjoint_gene_factor * disjoint_gene_count as f32
-            + config.excess_gene_factor * excess_gene_count as f32
-            + config.common_weight_factor * common_weight_diff
-    }
-
-    /// Combines both genomes and returns their _child_ genome.
-    ///
-    /// Depending on [`config.child_mutation_chance`], the child may
-    /// undergo mutations. Mutation chances are defined by their
-    /// corresponding entries in `config`.
-    ///
-    /// [`config.sexual_reproduction_chance`]: crate::genomics::GeneticConfig::sexual_reproduction_chance
-    /// [`config.child_mutation_chance`]: crate::genomics::GeneticConfig::child_mutation_chance
-    ///
-    /// # Examples
-    /// ### Asexual reproduction, no mutations
-    /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History};
-    /// use std::num::NonZeroUsize;
-    ///
-    /// let config = GeneticConfig {
-    ///     input_count: NonZeroUsize::new(3).unwrap(),
-    ///     output_count: NonZeroUsize::new(2).unwrap(),
-    ///     activation_types: vec![ActivationType::Sigmoid],
-    ///     initial_expression_chance: 1.0,
-    ///     child_mutation_chance: 0.0,
-    ///     ..GeneticConfig::zero()
-    /// };
-    ///
-    /// let parent = Genome::new(&config);
-    /// let parent_genes: Vec<_> = parent.genes().cloned().collect();
-    ///
-    /// // A genome can be "mated" with itself,
-    /// // which implies asexual reproduction:
-    /// let child = Genome::mate(&parent, &parent, &mut History::new(&config), &config);
-    /// assert!(child.genes().all(|g| parent_genes.contains(g)));
-    /// ```
-    ///
-    /// ### Sexual reproduction, with mutations
-    /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History};
-    /// use std::num::NonZeroUsize;
-    ///
-    /// let config = GeneticConfig {
-    ///     input_count: NonZeroUsize::new(3).unwrap(),
-    ///     output_count: NonZeroUsize::new(2).unwrap(),
-    ///     activation_types: vec![ActivationType::Sigmoid],
-    ///     initial_expression_chance: 0.5,
-    ///     child_mutation_chance: 1.0,
-    ///     weight_nudge_chance: 1.0,
-    ///     gene_addition_mutation_chance: 1.0,
-    ///     node_addition_mutation_chance: 1.0,
-    ///     ..GeneticConfig::zero()
-    /// };
-    ///
-    /// // All genomes have fitness 0 when generated.
-    /// let genome1 = Genome::new(&config);
-    /// let genome2 = Genome::new(&config);
-    /// let genome1_gene_ids: Vec<_> = genome1.genes().map(|g| g.innovation()).collect();
-    /// let genome2_gene_ids: Vec<_> = genome2.genes().map(|g| g.innovation()).collect();
-    ///
-    /// let child = Genome::mate(&genome1, &genome2, &mut History::new(&config), &config);
-    /// let child_gene_ids: Vec<_> = child.genes().map(|g| g.innovation()).collect();
-    ///
-    /// // The child has at least the same number of genes as each parent.
-    /// assert!(child_gene_ids.len() >= genome1_gene_ids.len());
-    /// assert!(child_gene_ids.len() >= genome2_gene_ids.len());
-    ///
-    /// // The child will have at most the sum of the parent's genes,
-    /// // plust at most one from a gene addition mutation and two
-    /// // from a node addition mutation.
-    /// assert!(child_gene_ids.len() <= genome1_gene_ids.len() + genome2_gene_ids.len() + 1 + 2);
-    /// assert!(child_gene_ids.iter().filter(|id| !genome1_gene_ids.contains(id) && !genome2_gene_ids.contains(id)).count() <= 3);
-    /// ```
-    fn mate(
-        parent1: &NNGenome,
-        parent2: &NNGenome,
-        history: &mut History,
-        config: &GeneticConfig,
-    ) -> NNGenome {
-        let (parent1, parent2) = if parent1.fitness <= parent2.fitness {
-            (parent1, parent2)
-        } else {
-            (parent2, parent1)
-        };
-
-        let mut child = parent1.clone();
-
-        child.combine(parent2, config);
-        if rand::thread_rng().gen::<f32>() < config.child_mutation_chance {
-            child.mutate_all(history, config);
-        }
-
-        child.reset_suppresseds(config);
-
-        child
-    }
-
-    /// Sets the genome's fitness to the value passed.
-    /// Fitness should be a positive quantity.
-    ///
-    /// # Examples
-    /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    ///
-    /// let mut genome = Genome::new(&GeneticConfig::zero());
-    ///
-    /// assert_eq!(genome.fitness(), 0.0);
-    ///
-    /// genome.set_fitness(32.0);
-    ///
-    /// assert_eq!(genome.fitness(), 32.0);
-    ///
-    /// // Will panic:
-    /// // genome.set_fitness(-1.0);
-    /// ```
-    fn set_fitness(&mut self, fitness: f32) {
-        assert!(fitness >= 0.0, "fitness function return a negative value");
-        self.fitness = fitness;
-    }
-
-    /// Returns a the genome's current fitness.
-    ///
-    /// # Examples
-    /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    ///
-    /// let genome = Genome::new(&GeneticConfig::zero());
-    ///
-    /// assert_eq!(genome.fitness(), 0.0);
-    /// ```
-    fn fitness(&self) -> f32 {
-        self.fitness
-    }
-}
-
-impl NNGenome {
     /// Generate the input and output nodes
     /// corresponding to the passed configuration.
     fn generate_input_output_nodes(
@@ -380,7 +206,7 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome};
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, NNGenome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -390,7 +216,7 @@ impl NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     ///
     /// // The genome is initially empty.
     /// assert_eq!(genome.genes().count(), 0);
@@ -485,7 +311,7 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, NodeType,};
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, NNGenome, NodeType};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -495,7 +321,7 @@ impl NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     ///
     /// // The new genome should have 3 sensors and 2 actuators only.
     /// assert_eq!(genome.nodes().count(), 3 + 2);
@@ -554,7 +380,7 @@ impl NNGenome {
     /// The weight is set to a random value in the range
     /// `[-weight_bound, weight_bound]`.
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -567,7 +393,7 @@ impl NNGenome {
     /// };
     ///
     /// // The genome has a single gene, whose weight we can retrieve.
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     /// let initial_weight = genome.genes().next().unwrap().weight();
     ///
     /// genome.mutate_weights(&config);
@@ -585,7 +411,7 @@ impl NNGenome {
     /// A random value from the range `[-weight_mutation_power, weight_mutation_power]`
     /// is added to the weight, which is then clamped to `[-weight_bound, weight_bound]`.
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -598,7 +424,7 @@ impl NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     /// let initial_weight = genome.genes().next().unwrap().weight();
     ///
     /// genome.mutate_weights(&config);
@@ -645,7 +471,7 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome, History};
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome, History};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -657,7 +483,7 @@ impl NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     ///
     /// // The genome is initially empty.
     /// assert_eq!(genome.genes().count(), 0);
@@ -800,7 +626,7 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, History, NodeType};
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, History, NNGenome, NodeType};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -812,7 +638,7 @@ impl NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     ///
     /// // The genome starts with a single neuron gene,
     /// // and a sensor and actuator node.
@@ -943,14 +769,14 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{Genome, GeneticConfig};
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
     ///
     /// let config = GeneticConfig {
     ///     initial_expression_chance: 1.0,
     ///     gene_deletion_mutation_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// };
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     ///
     /// let initial_gene_count = genome.genes().count();
     ///
@@ -974,13 +800,13 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, Gene, Node, NodeType};
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, Gene, NNGenome, Node, NodeType};
     ///
     /// let config = GeneticConfig {
     ///     node_deletion_mutation_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// };
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     /// genome.add_node(42, ActivationType::Sigmoid).unwrap();
     /// genome.add_gene(16, 0, 42, 1.0).unwrap();
     /// genome.add_gene(17, 42, 1, 1.0).unwrap();
@@ -1017,10 +843,10 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, Gene};
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, Gene, NNGenome};
     ///
     /// let config = GeneticConfig::zero();
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     /// genome.add_node(42, ActivationType::Sigmoid).unwrap();
     /// genome.add_gene(16, 0, 42, 1.0).unwrap();
     ///
@@ -1060,13 +886,13 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{ActivationType, GeneticConfig, Genome, Gene, Node, NodeType};
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, Gene, NNGenome, Node, NodeType};
     ///
     /// let config = GeneticConfig {
     ///     node_deletion_mutation_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// };
-    /// let mut genome = Genome::new(&config);
+    /// let mut genome = NNGenome::new(&config);
     /// genome.add_node(42, ActivationType::Sigmoid).unwrap();
     /// genome.add_gene(16, 0, 42, 1.0).unwrap();
     /// genome.add_gene(17, 42, 1, 1.0).unwrap();
@@ -1111,6 +937,99 @@ impl NNGenome {
             .collect();
 
         (node, input_genes, output_genes)
+    }
+
+    /// Combines both genomes and returns their _child_ genome.
+    ///
+    /// Depending on [`config.child_mutation_chance`], the child may
+    /// undergo mutations. Mutation chances are defined by their
+    /// corresponding entries in `config`.
+    ///
+    /// [`config.sexual_reproduction_chance`]: crate::genomics::GeneticConfig::sexual_reproduction_chance
+    /// [`config.child_mutation_chance`]: crate::genomics::GeneticConfig::child_mutation_chance
+    ///
+    /// # Examples
+    /// ### Asexual reproduction, no mutations
+    /// ```
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, History, NNGenome};
+    /// use std::num::NonZeroUsize;
+    ///
+    /// let config = GeneticConfig {
+    ///     input_count: NonZeroUsize::new(3).unwrap(),
+    ///     output_count: NonZeroUsize::new(2).unwrap(),
+    ///     activation_types: vec![ActivationType::Sigmoid],
+    ///     initial_expression_chance: 1.0,
+    ///     child_mutation_chance: 0.0,
+    ///     ..GeneticConfig::zero()
+    /// };
+    ///
+    /// let parent = NNGenome::new(&config);
+    /// let parent_genes: Vec<_> = parent.genes().cloned().collect();
+    ///
+    /// // A genome can be "mated" with itself,
+    /// // which implies asexual reproduction:
+    /// let child = NNGenome::mate(&parent, &parent, &mut History::new(&config), &config);
+    /// assert!(child.genes().all(|g| parent_genes.contains(g)));
+    /// ```
+    ///
+    /// ### Sexual reproduction, with mutations
+    /// ```
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, History, NNGenome};
+    /// use std::num::NonZeroUsize;
+    ///
+    /// let config = GeneticConfig {
+    ///     input_count: NonZeroUsize::new(3).unwrap(),
+    ///     output_count: NonZeroUsize::new(2).unwrap(),
+    ///     activation_types: vec![ActivationType::Sigmoid],
+    ///     initial_expression_chance: 0.5,
+    ///     child_mutation_chance: 1.0,
+    ///     weight_nudge_chance: 1.0,
+    ///     gene_addition_mutation_chance: 1.0,
+    ///     node_addition_mutation_chance: 1.0,
+    ///     ..GeneticConfig::zero()
+    /// };
+    ///
+    /// // All genomes have fitness 0 when generated.
+    /// let genome1 = NNGenome::new(&config);
+    /// let genome2 = NNGenome::new(&config);
+    /// let genome1_gene_ids: Vec<_> = genome1.genes().map(|g| g.innovation()).collect();
+    /// let genome2_gene_ids: Vec<_> = genome2.genes().map(|g| g.innovation()).collect();
+    ///
+    /// let child = NNGenome::mate(&genome1, &genome2, &mut History::new(&config), &config);
+    /// let child_gene_ids: Vec<_> = child.genes().map(|g| g.innovation()).collect();
+    ///
+    /// // The child has at least the same number of genes as each parent.
+    /// assert!(child_gene_ids.len() >= genome1_gene_ids.len());
+    /// assert!(child_gene_ids.len() >= genome2_gene_ids.len());
+    ///
+    /// // The child will have at most the sum of the parent's genes,
+    /// // plust at most one from a gene addition mutation and two
+    /// // from a node addition mutation.
+    /// assert!(child_gene_ids.len() <= genome1_gene_ids.len() + genome2_gene_ids.len() + 1 + 2);
+    /// assert!(child_gene_ids.iter().filter(|id| !genome1_gene_ids.contains(id) && !genome2_gene_ids.contains(id)).count() <= 3);
+    /// ```
+    pub fn mate(
+        parent1: &NNGenome,
+        parent2: &NNGenome,
+        history: &mut History,
+        config: &GeneticConfig,
+    ) -> NNGenome {
+        let (parent1, parent2) = if parent1.fitness <= parent2.fitness {
+            (parent1, parent2)
+        } else {
+            (parent2, parent1)
+        };
+
+        let mut child = parent1.clone();
+
+        child.combine(parent2, config);
+        if rand::thread_rng().gen::<f32>() < config.child_mutation_chance {
+            child.mutate_all(history, config);
+        }
+
+        child.reset_suppresseds(config);
+
+        child
     }
 
     /// Performs all mutations on self.
@@ -1192,6 +1111,77 @@ impl NNGenome {
         }
     }
 
+        /// Calculates the _genetic distance_ between `self` and `other`,
+    /// weighting node and weight differences as specified in `config`.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat_nn::genomics::{ActivationType, GeneticConfig, History, NNGenome};
+    /// use std::num::NonZeroUsize;
+    ///
+    /// // Completely arbitrary quantities.
+    /// const EXCESS_FACTOR: f32 = 1.5;
+    /// const DISJOINT_FACTOR: f32 = 0.5;
+    /// const WEIGHT_FACTOR: f32 = 0.333;
+    ///
+    /// let config = GeneticConfig {
+    ///     input_count: NonZeroUsize::new(2).unwrap(),
+    ///     output_count: NonZeroUsize::new(1).unwrap(),
+    ///     activation_types: vec![ActivationType::Sigmoid],
+    ///     initial_expression_chance: 0.0,
+    ///     excess_gene_factor: EXCESS_FACTOR,
+    ///     disjoint_gene_factor: DISJOINT_FACTOR,
+    ///     common_weight_factor: WEIGHT_FACTOR,
+    ///     ..GeneticConfig::zero()
+    /// };
+    ///
+    /// let mut genome1 = NNGenome::new(&config);
+    /// let mut genome2 = NNGenome::new(&config);
+    ///
+    /// genome1.add_node(3, ActivationType::Sigmoid).unwrap();
+    /// genome2.add_node(3, ActivationType::Sigmoid).unwrap();
+    ///
+    /// // Common gene, weight difference of 2.0.
+    /// genome1.add_gene(0, 0, 2, 1.0).unwrap();
+    /// genome2.add_gene(0, 0, 2, -1.0).unwrap();
+    ///
+    /// // Disjoint genes.
+    /// genome1.add_gene(1, 1, 2, 3.0).unwrap();
+    /// genome2.add_gene(2, 1, 3, 1.0).unwrap();
+    ///
+    /// // Common gene, weight_difference of 0.0.
+    /// genome1.add_gene(3, 2, 3, 1.0).unwrap();
+    /// genome2.add_gene(3, 2, 3, 1.0).unwrap();
+    ///
+    /// // Excess gene.
+    /// genome1.add_gene(4, 2, 2, 3.0).unwrap();
+    ///
+    /// assert_eq!(
+    ///     NNGenome::genetic_distance(&genome1, &genome2, &config),
+    ///     DISJOINT_FACTOR * (1 + 1) as f32 +
+    ///         EXCESS_FACTOR * (1) as f32 +
+    ///         WEIGHT_FACTOR * (2.0 + 0.0) / 2.0  // Divide by number of common genes to get average.
+    /// );
+    /// ```
+    pub fn genetic_distance(first: &NNGenome, second: &NNGenome, config: &GeneticConfig) -> f32 {
+        let (common_innovations, common_weight_pairs) =
+            Self::common_innovations_and_weights(first, second);
+
+        let common_weight_diff = Self::weight_diff_average(&common_weight_pairs);
+
+        let disjoint_gene_count_self = first.count_disjoint_genes(&common_innovations);
+        let disjoint_gene_count_other = second.count_disjoint_genes(&common_innovations);
+        let disjoint_gene_count = disjoint_gene_count_self + disjoint_gene_count_other;
+
+        let excess_gene_count =
+            (first.genes.len() - common_innovations.len() - disjoint_gene_count_self)
+                + (second.genes.len() - common_innovations.len() - disjoint_gene_count_other);
+
+        config.disjoint_gene_factor * disjoint_gene_count as f32
+            + config.excess_gene_factor * excess_gene_count as f32
+            + config.common_weight_factor * common_weight_diff
+    }
+
     /// Returns the set of genes common to both genomes,
     /// and the corresponding pairs of weights.
     fn common_innovations_and_weights(
@@ -1233,6 +1223,43 @@ impl NNGenome {
             .count()
     }
 
+    /// Sets the genome's fitness to the value passed.
+    /// Fitness should be a positive quantity.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    ///
+    /// let mut genome = NNGenome::new(&GeneticConfig::zero());
+    ///
+    /// assert_eq!(genome.fitness(), 0.0);
+    ///
+    /// genome.set_fitness(32.0);
+    ///
+    /// assert_eq!(genome.fitness(), 32.0);
+    ///
+    /// // Will panic:
+    /// // genome.set_fitness(-1.0);
+    /// ```
+    pub fn set_fitness(&mut self, fitness: f32) {
+        assert!(fitness >= 0.0, "fitness function return a negative value");
+        self.fitness = fitness;
+    }
+
+    /// Returns a the genome's current fitness.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    ///
+    /// let genome = NNGenome::new(&GeneticConfig::zero());
+    ///
+    /// assert_eq!(genome.fitness(), 0.0);
+    /// ```
+    pub fn fitness(&self) -> f32 {
+        self.fitness
+    }
+
     /// Returns a n iterator over the set of the genome's genes.
     ///
     /// # Notes
@@ -1240,7 +1267,7 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -1250,7 +1277,7 @@ impl NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let genome = Genome::new(&config);
+    /// let genome = NNGenome::new(&config);
     ///
     /// for gene in genome.genes() {
     ///     println!("gene: {}", gene);
@@ -1267,7 +1294,7 @@ impl NNGenome {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
+    /// use oxineat_nn::genomics::{GeneticConfig, NNGenome};
     /// use std::num::NonZeroUsize;
     ///
     /// let config = GeneticConfig {
@@ -1277,7 +1304,7 @@ impl NNGenome {
     ///     ..GeneticConfig::zero()
     /// };
     ///
-    /// let genome = Genome::new(&config);
+    /// let genome = NNGenome::new(&config);
     ///
     /// for node in genome.nodes() {
     ///     println!("node: {}", node);
@@ -1294,7 +1321,7 @@ impl fmt::Display for NNGenome {
         let mut nodes: Vec<&Node> = self.nodes.values().collect();
         genes.sort_unstable_by_key(|g| g.innovation());
         nodes.sort_unstable_by_key(|n| n.innovation());
-        f.debug_struct("Genome")
+        f.debug_struct("NNGenome")
             .field("Genes", &genes)
             .field("Nodes", &nodes)
             .field("Fitness", &self.fitness)
@@ -1306,7 +1333,6 @@ impl fmt::Display for NNGenome {
 mod tests {
     use super::*;
     use std::num::NonZeroUsize;
-    use oxineat::InnovationHistory;
 
     #[test]
     fn new_fully_connected() {

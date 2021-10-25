@@ -1,15 +1,20 @@
-//! A Network is a simple near-isomorphism of a Genome
-//! generated as the phenotypes of said Genome,
-//! with suppressed genes being ignored. Genes are
-//! converted into connections, and genome nodes
+//! A network is a simple near-isomorphism of a [`NNGenome`],
+//! with suppressed genes being ignored. [`Gene`]s are
+//! converted into connections, and [`Node`]s
 //! into network nodes.
 //! 
-//! The `RealTimeNetwork` type is best suited for real-time
+//! The [`RealTimeNetwork`] type is best suited for real-time
 //! control tasks, with new inputs set for each activation,
 //! and multiple time-steps involved.
 //! 
 //! For a more instantaneous input-result use-case, the
-//! `FunctionApproximatorNetwork` type is more appropiate.
+//! [`FunctionApproximatorNetwork`] type is more appropiate.
+//! 
+//! [`NNGenome`]: crate::genomics::NNGenome
+//! [`Gene`]: crate::genomics::Gene
+//! [`Node`]: crate::genomics::Node
+//! [`RealTimeNetwork`]: crate::networks::RealTimeNetwork
+//! [`FunctionApproximatorNetwork`]: crate::networks::FunctionApproximatorNetwork
 mod connection;
 mod function_approximator;
 
@@ -41,13 +46,13 @@ impl RealTimeNetwork {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::{
-    ///     genomics::{ActivationType, GeneticConfig, Genome},
+    /// use oxineat_nn::{
+    ///     genomics::{ActivationType, GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
     /// use std::num::NonZeroUsize;
     ///
-    /// let genome = Genome::new(&GeneticConfig {
+    /// let genome = NNGenome::new(&GeneticConfig {
     ///     input_count: NonZeroUsize::new(3).unwrap(),
     ///     output_count: NonZeroUsize::new(2).unwrap(),
     ///     initial_expression_chance: 1.0,
@@ -55,9 +60,9 @@ impl RealTimeNetwork {
     ///     ..GeneticConfig::zero()
     /// });
     /// 
-    /// let network = RealTimeNetwork::new(&genome);
+    /// let network = RealTimeNetwork::from(&genome);
     /// ```
-    pub fn new(genome: &NNGenome) -> RealTimeNetwork {
+    pub fn from(genome: &NNGenome) -> RealTimeNetwork {
         let mut input_nodes = vec![];
         let mut output_nodes = vec![];
         let mut hidden_nodes = vec![];
@@ -114,13 +119,13 @@ impl RealTimeNetwork {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::{
-    ///     genomics::{ActivationType, GeneticConfig, Genome},
+    /// use oxineat_nn::{
+    ///     genomics::{ActivationType, GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
     /// use std::num::NonZeroUsize;
     ///
-    /// let mut genome = Genome::new(&GeneticConfig {
+    /// let mut genome = NNGenome::new(&GeneticConfig {
     ///     input_count: NonZeroUsize::new(2).unwrap(),
     ///     output_count: NonZeroUsize::new(1).unwrap(),
     ///     output_activation_types: vec![ActivationType::ReLU],
@@ -129,7 +134,7 @@ impl RealTimeNetwork {
     /// genome.add_gene(0, 0, 2, 2.5).unwrap();
     /// genome.add_gene(1, 1, 2, -2.5).unwrap();
     /// 
-    /// let mut network = RealTimeNetwork::new(&genome);
+    /// let mut network = RealTimeNetwork::from(&genome);
     /// network.set_inputs(&[0.5, 1.0]);
     /// 
     /// network.activate();
@@ -173,17 +178,17 @@ impl RealTimeNetwork {
     /// 
     /// # Examples
     /// ```
-    /// use oxineat::{
-    ///     genomics::{GeneticConfig, Genome},
+    /// use oxineat_nn::{
+    ///     genomics::{GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
     /// 
-    /// let genome = Genome::new(&GeneticConfig{
+    /// let genome = NNGenome::new(&GeneticConfig{
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// });
     /// 
-    /// let mut network = RealTimeNetwork::new(&genome);
+    /// let mut network = RealTimeNetwork::from(&genome);
     /// network.set_inputs(&[1.0]);
     /// network.activate();
     /// assert_ne!(network.outputs()[0], 0.0);
@@ -212,17 +217,17 @@ impl RealTimeNetwork {
     /// 
     /// /// # Examples
     /// ```
-    /// use oxineat::{
-    ///     genomics::{GeneticConfig, Genome},
+    /// use oxineat_nn::{
+    ///     genomics::{GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
     /// 
-    /// let genome = Genome::new(&GeneticConfig{
+    /// let genome = NNGenome::new(&GeneticConfig{
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// });
     /// 
-    /// let mut network = RealTimeNetwork::new(&genome);
+    /// let mut network = RealTimeNetwork::from(&genome);
     /// network.set_inputs(&[1.0]);
     /// ```
     pub fn set_inputs(&mut self, values: &[f32]) {
@@ -234,17 +239,17 @@ impl RealTimeNetwork {
     /// 
     /// /// # Examples
     /// ```
-    /// use oxineat::{
-    ///     genomics::{GeneticConfig, Genome},
+    /// use oxineat_nn::{
+    ///     genomics::{GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
     /// 
-    /// let genome = Genome::new(&GeneticConfig{
+    /// let genome = NNGenome::new(&GeneticConfig{
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// });
     /// 
-    /// let mut network = RealTimeNetwork::new(&genome);
+    /// let mut network = RealTimeNetwork::from(&genome);
     /// assert_eq!(network.outputs()[0], 0.0);
     /// 
     /// network.set_inputs(&[1.0]);
@@ -278,7 +283,6 @@ mod tests {
     use super::*;
     use crate::genomics::{ActivationType, GeneticConfig};
     use std::num::NonZeroUsize;
-    use oxineat::Genome;
 
     fn sigmoid(x: f32) -> f32 {
         1.0 / (1.0 + (-4.9 * x).exp())
@@ -304,7 +308,7 @@ mod tests {
         // Suppressed gene shouldn't be expressed in network.
         genome.add_gene(1, 0, 3, -1.0).unwrap().set_suppressed(true);
 
-        let network = RealTimeNetwork::new(&genome);
+        let network = RealTimeNetwork::from(&genome);
         assert_eq!(network.input_count, 2);
         assert_eq!(network.output_count, 2);
         assert_eq!(
@@ -334,7 +338,7 @@ mod tests {
     #[test]
     fn activate_empty() {
         let genome = NNGenome::new(&GeneticConfig::zero());
-        let mut network = RealTimeNetwork::new(&genome);
+        let mut network = RealTimeNetwork::from(&genome);
         assert!((0..100).all(|_| {
             network.activate();
             network.outputs()[0] == sigmoid(0.0)
@@ -345,7 +349,7 @@ mod tests {
     fn activate_single() {
         let mut genome = NNGenome::new(&GeneticConfig::zero());
         genome.add_gene(0, 0, 1, 1.0).unwrap();
-        let mut network = RealTimeNetwork::new(&genome);
+        let mut network = RealTimeNetwork::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
             network.clear_state();
@@ -360,7 +364,7 @@ mod tests {
         let mut genome = NNGenome::new(&GeneticConfig::zero());
         genome.add_gene(0, 0, 1, 1.0).unwrap();
         genome.add_gene(1, 1, 1, -1.0).unwrap(); // Recursive connection
-        let mut network = RealTimeNetwork::new(&genome);
+        let mut network = RealTimeNetwork::from(&genome);
         let mut prev_output = 0.0;
         for input in -20..=20 {
             let input = input as f32 / 10.0;
@@ -377,7 +381,7 @@ mod tests {
         genome.add_node(2, ActivationType::Sigmoid).unwrap();
         genome.add_gene(0, 0, 2, 1.0).unwrap();
         genome.add_gene(1, 2, 1, 1.0).unwrap();
-        let mut network = RealTimeNetwork::new(&genome);
+        let mut network = RealTimeNetwork::from(&genome);
         for input in -20..=20 {
             let input = input as f32 / 10.0;
             network.clear_state();
@@ -396,7 +400,7 @@ mod tests {
         genome.add_gene(0, 0, 3, -1.0).unwrap();
         genome.add_gene(1, 1, 3, 1.0).unwrap();
         genome.add_gene(2, 2, 3, 0.5).unwrap();
-        let mut network = RealTimeNetwork::new(&genome);
+        let mut network = RealTimeNetwork::from(&genome);
         for ((x, y), z) in (-20..=20).zip(-20..=20).zip(-20..=20) {
             let (x, y, z) = (x as f32 / 10.0, y as f32 / 10.0, z as f32 / 10.0);
             network.clear_state();

@@ -1,13 +1,20 @@
-use oxineat_nn::genomics::{ActivationType, NNGenome, GeneticConfig};
-use oxineat_nn::networks::FunctionApproximatorNetwork;
-use oxineat::{Population, PopulationConfig, logging::Stats};
-// use neat::populations::{EvolutionLogger, ReportingLevel};
+# OxiNEAT-NN
+An neural network-based implementation of the [`OxiNEAT` crate](https://crates.io/crates/oxineat)'s `Genome` trait.
 
+Provides a `GenomeNN` type usable in `OxiNEAT` `Population`s, as well as two neural network implementations which can be generated from a `GenomeNN`:
+- `RealTimeNetwork`: best suited for real-time control tasks, with new inputs set for each activation, and multiple time-steps involved.
+- `FunctionApproximatorNetwork`: best suited for more instantaneous single-output-per-input function approximation tasks.
+
+# Example usage: evolution of XOR function approximator
+```rust
+use oxineat::{Population, PopulationConfig};
+use oxineat_nn::{
+    genomics::{ActivationType, GeneticConfig, NNGenome},
+    networks::FunctionApproximatorNetwork,
+};
 use std::num::NonZeroUsize;
 
-use rayon::prelude::*;
-use std::sync::{Arc, Mutex};
-
+// Allowed error margin for neural net answers.
 const ERROR_MARGIN: f32 = 0.3;
 
 fn evaluate_xor(genome: &NNGenome) -> f32 {
@@ -47,8 +54,6 @@ fn main() {
         weight_mutation_power: 2.5,
         node_addition_mutation_chance: 0.03,
         gene_addition_mutation_chance: 0.05,
-        node_deletion_mutation_chance: 0.001,
-        gene_deletion_mutation_chance: 0.002,
         max_gene_addition_mutation_attempts: 20,
         recursion_chance: 0.0,
         excess_gene_factor: 1.0,
@@ -56,60 +61,36 @@ fn main() {
         common_weight_factor: 0.4,
         ..GeneticConfig::zero()
     };
+
     let population_config = PopulationConfig {
         population_size: NonZeroUsize::new(150).unwrap(),
         distance_threshold: 3.0,
         elitism: 1,
         survival_threshold: 0.2,
-        adoption_rate: 1.0,
         sexual_reproduction_chance: 0.6,
+        adoption_rate: 1.0,
         interspecies_mating_chance: 0.001,
         stagnation_threshold: NonZeroUsize::new(15).unwrap(),
         stagnation_penalty: 1.0,
     };
 
-    // let logger = Arc::new(Mutex::new(EvolutionLogger::new(
-    // ReportingLevel::SpeciesChampions,
-    // )));
-    let generations = Arc::new(Mutex::new(vec![]));
-
-    const ITERATIONS: usize = 2000;
-    (0..ITERATIONS).into_par_iter().for_each(|_| {
-        let mut population = Population::new(population_config.clone(), genetic_config.clone());
-        for _ in 0..100 {
-            population.evaluate_fitness(evaluate_xor);
-            // logger.lock().unwrap().log(&population);
-            {
-                if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {
-                    break;
-                }
-            }
-            if let Err(e) = population.evolve() {
-                eprintln!("{}", e);
-                // population.reset()
-                break;
-            }
-        }
+    let mut population = Population::new(population_config, genetic_config);
+    for _ in 0..100 {
+        population.evaluate_fitness(evaluate_xor);
         if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {
-            generations
-                .lock()
-                .unwrap()
-                .push(Some(population.generation()));
-        } else {
-            generations.lock().unwrap().push(None);
+            println!("Solution found: {}", population.champion());
+            break;
         }
-    });
-
-    let generations = generations.lock().unwrap();
-
-    println!(
-        "Successful run generation count {:?}, {}% failure rate over {} iterations",
-        Stats::from(
-            &mut generations
-                .iter()
-                .filter_map(|g| g.as_ref().map(|g| *g as f32))
-        ),
-        generations.iter().filter(|g| g.is_none()).count() as f32 * 100.0 / ITERATIONS as f32,
-        ITERATIONS
-    );
+        if let Err(e) = population.evolve() {
+            eprintln!("{}", e);
+            break;
+        }
+    }
 }
+```
+
+#### License
+
+<sup>
+Licensed under the <a href="LICENSE-MIT">MIT license</a>.
+</sup>

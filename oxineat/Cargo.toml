@@ -1,7 +1,6 @@
 [package]
 name = "oxineat"
-version = "0.2.1"
-authors = ["Fr4ctlize <fortizk@outlook.com>"]
+version = "0.3.0"
 edition = "2018"
 license = "MIT"
 description = "A Rust implementation of NeuroEvolution of Augmenting Topologies"

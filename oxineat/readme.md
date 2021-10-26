@@ -1,12 +1,11 @@
 # OxiNEAT
 An implementation of **NeuroEvolution of Augmenting Topologies** (*NEAT*),
-following the 2002 paper: <http://nn.cs.utexas.edu/keyword?stanley:ec02>
+following the [2002 paper](http://nn.cs.utexas.edu/keyword?stanley:ec02)
 
-It is designed to be highly-configurable, and supports population 
-logging throughout the evolutionary process. A straight-forward
-implementation of a neural network phenotype is provided, but
-the crate is designed such that any other implementation that
-can be generated from a Genome is usable as a drop-in replacement.
+It is designed to be highly-configurable, allowing arbitrary user-defined
+genomic structures via the `Genome` trait. Generational population logging
+is also supported. A neural network-based genome representation, as in the
+original algorithm, is supplied via the [`OxiNEAT-NN`](https://crates.io/crates/oxineat-nn) crate.
 
 This crate was implemented as both a learning exercise in using Rust
 and as a tool for my own experimentation. Critiques and contributions
@@ -15,7 +14,7 @@ are welcome.
 This is still very much a work-in-progress, so interfaces and implementations
 may change in the future.
 
-# Example usage: evolution of XOR function approximator, using `OxiNEAT-NN` as a `Genome` implementation
+## Example usage: evolution of XOR function approximator, using `OxiNEAT-NN`
 ```rust
 use oxineat::{Population, PopulationConfig};
 use oxineat_nn::{

@@ -1,12 +1,9 @@
 [package]
 name = "xor"
 version = "0.1.0"
-authors = ["Fr4ctlize <fortizk@outlook.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-oxineat = { path = "../oxineat" }
-oxineat-nn = { path = "../oxineat-nn" }
+oxineat = "0.3.0"
+oxineat-nn = "0.1.0"
 rayon = "1.5.1"

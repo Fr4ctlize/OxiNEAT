@@ -7,7 +7,7 @@ description = "A neural-network implementation of the OxiNEAT crate's Genome tra
 repository = "https://github.com/Fr4ctlize/OxiNEAT"
 documentation = "https://docs.rs/oxineat-nn/"
 readme = "README.md"
-keywords = ["neat", "neural network"]
+keywords = ["neat", "neural-network"]
 
 [dependencies]
 rand = "0.8.3"

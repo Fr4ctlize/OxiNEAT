@@ -3,7 +3,7 @@ pub trait Genome {
     type Config;
     type InnovationHistory: InnovationHistory<Config = Self::Config>;
 
-    /// Returns a randomized genome.
+    /// Returns a randomized _minimal_ genome.
     fn new(config: &Self::Config) -> Self;
 
     /// Returns the genetic distance between two genomes.

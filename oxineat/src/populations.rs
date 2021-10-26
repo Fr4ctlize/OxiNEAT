@@ -1,17 +1,17 @@
-//! A Population is a collection of genomes grouped
-//! into species that can be evolved using a genome
-//! evaluation function as the source of selective
-//! pressure.
+//! A Population is a collection of genomes.
+//! These are grouped into species, which can
+//! be evolved using a genome evaluation function
+//! as the source of selective pressure.
 mod config;
 mod errors;
-mod log;
+pub mod logging;
 mod offspring_factory;
+mod rt_population;
 mod species;
 
 use crate::{Genome, InnovationHistory};
 pub use config::PopulationConfig;
 use errors::*;
-pub use log::*;
 use offspring_factory::OffspringFactory;
 pub use species::{Species, SpeciesID};
 
@@ -29,7 +29,6 @@ pub struct Population<C, H, G> {
 
 impl<C, H, G> Population<C, H, G>
 where
-    H: InnovationHistory<Config = C>,
     G: Genome<InnovationHistory = H, Config = C> + Clone,
 {
     /// Creates a new population using the passed configurations.
@@ -37,20 +36,35 @@ where
     /// These configurations shouldn't be modified once evolution
     /// begins, thus they are copied and kept by the population for
     /// the duration of its lifetime.
+    /// 
+    /// The type of `genetic_config` depends on the implementation
+    /// of [`Genome`], and is effectively opaque to the population.
     ///
+    /// [`Genome`]: crate::Genome
+    /// 
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
     ///
-    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// let pop_config = PopulationConfig {
+    ///     // Set desired configuration
+    ///     ..PopulationConfig::zero()
+    /// };
+    /// # let genetic_config = GeneticConfig::zero();
+    /// 
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let population = Population::<_, _, G>::new(pop_config, genetic_config);
     /// ```
-    pub fn new(population_config: PopulationConfig, genetic_config: C) -> Population<C, H, G> {
+    pub fn new(population_config: PopulationConfig, genetic_config: C) -> Population<C, H, G>
+    where
+        H: InnovationHistory<Config = C>,
+    {
         Population {
             species: {
                 let mut s0 = Species::new(SpeciesID(0, 0), G::new(&genetic_config));
                 s0.genomes.extend(
-                    (1..population_config.population_size.get()).map(|_| G::new(&genetic_config)),
+                    (1..population_config.size.get()).map(|_| G::new(&genetic_config)),
                 );
                 vec![s0]
             },
@@ -70,22 +84,22 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
-    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// # use oxineat_nn::genomics::GeneticConfig;
+    /// # use oxineat_nn::networks::FunctionApproximatorNetwork;
+    /// use oxineat::{Population, PopulationConfig};
     ///
+    /// # let genetic_config = GeneticConfig::zero();
     /// let mut population = Population::new(
     ///     PopulationConfig::zero(),
-    ///     GeneticConfig {
-    ///         initial_expression_chance: 1.0,
-    ///         ..GeneticConfig::zero()
-    ///     },
+    ///     genetic_config,
     /// );
     ///
     /// population.evaluate_fitness(|g| {
-    ///     let mut network = FunctionApproximatorNetwork::new::<1>(g);
-    ///     // Networks with outputs closer to 0 are given higher scores.
-    ///     (1.0 - (network.evaluate_at(&[1.0])[0] - 0.0)).powf(2.0)
+    ///     # let mut network = FunctionApproximatorNetwork::from::<1>(g);
+    ///     # // Networks with outputs closer to 0 are given higher scores.
+    ///     # let fitness = (1.0 - (network.evaluate_at(&[1.0])[0] - 0.0)).powf(2.0);
+    ///     // Compute genome's fitness...
+    ///     return fitness;
     /// });
     /// ```
     pub fn evaluate_fitness<E>(&mut self, mut evaluator: E)
@@ -103,7 +117,7 @@ where
     /// genomes of each species, and re-speciating genomes
     /// as appropiate.
     ///
-    /// If the [adoption rate] is different from 1, offspring
+    /// If the [adoption rate] is less than 1, offspring
     /// will have a chance of being placed into their parent's
     /// species without speciation, which seems to help NEAT
     /// find solutions faster. (See [[Nodine, T., 2010]].)
@@ -126,31 +140,36 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
-    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// # use oxineat_nn::networks::FunctionApproximatorNetwork;
+    /// use oxineat::{Population, PopulationConfig};
     ///
+    /// # let genetic_config = GeneticConfig::zero();
+    /// // With `G` a suitable type implementing `Genome`...
     /// let mut population = Population::new(
     ///     PopulationConfig {
-    ///         survival_threshold: 0.4,
+    ///         survival_threshold: 1.0,
     ///         ..PopulationConfig::zero()
     ///     },
-    ///     GeneticConfig {
-    ///         initial_expression_chance: 1.0,
-    ///         ..GeneticConfig::zero()
-    ///     },
+    ///     genetic_config,
     /// );
     ///
     /// population.evaluate_fitness(|g| {
-    ///     // Do something useful...
-    ///     1.0
+    ///     # let mut network = FunctionApproximatorNetwork::from::<1>(g);
+    ///     # // Networks with outputs closer to 0 are given higher scores.
+    ///     # let fitness = (1.0 - (network.evaluate_at(&[1.0])[0] - 0.0)).powf(2.0);
+    ///     // Compute genome's fitness...
+    ///     return fitness;
     /// });
     ///
     /// if let Err(e) = population.evolve() {
     ///     eprintln!("{}", e);
     /// }
     /// ```
-    pub fn evolve(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn evolve(&mut self) -> Result<(), Box<dyn std::error::Error>>
+    where
+        H: InnovationHistory<Config = C>,
+    {
         match self.allot_offspring() {
             Ok(allotted_offspring) => {
                 self.species.iter_mut().for_each(Species::update_fitness);
@@ -190,7 +209,7 @@ where
         Some(
             fitnesses
                 .iter()
-                .map(|f| *f / fitness_sum * self.population_config.population_size.get() as f32)
+                .map(|f| *f / fitness_sum * self.population_config.size.get() as f32)
                 .collect(),
         )
     }
@@ -223,7 +242,10 @@ where
     /// [species' elite]: PopulationConfig::elitism
     /// [top performers]: PopulationConfig::survival_threshold
     /// [chance]: PopulationConfig::interspecies_mating_chance
-    fn generate_offspring(&mut self, allotted_offspring: &[usize]) {
+    fn generate_offspring(&mut self, allotted_offspring: &[usize])
+    where
+        H: InnovationHistory<Config = C>,
+    {
         self.sort_species_members_by_decreasing_fitness();
 
         let mut species_offspring = OffspringFactory::new(
@@ -333,13 +355,14 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
-    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
     ///
-    /// let mut population = Population::new(
+    /// # let genetic_config = GeneticConfig::zero();
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let mut population = Population::<_, _, G>::new(
     ///     PopulationConfig::zero(),
-    ///     GeneticConfig::zero(),
+    ///     genetic_config,
     /// );
     ///
     /// // Evolve the population on some task, until
@@ -349,6 +372,7 @@ where
     pub fn reset(&mut self)
     where
         C: Clone,
+        H: InnovationHistory<Config = C>,
     {
         *self = Population::new(self.population_config.clone(), self.genetic_config.clone());
     }
@@ -357,16 +381,17 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
-    /// use oxineat::networks::FunctionApproximatorNetwork;
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
     ///
-    /// let mut population = Population::new(
+    /// # let genetic_config = GeneticConfig::zero();
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let mut population = Population::<_, _, G>::new(
     ///     PopulationConfig {
-    ///         population_size: std::num::NonZeroUsize::new(20).unwrap(),
+    ///         size: std::num::NonZeroUsize::new(20).unwrap(),
     ///         ..PopulationConfig::zero()
     ///     },
-    ///     GeneticConfig::zero(),
+    ///     genetic_config,
     /// );
     ///
     /// let mut fitness = 0.0;
@@ -393,10 +418,12 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
     ///
-    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// # let genetic_config = GeneticConfig::zero();
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let population = Population::<_, _, G>::new(PopulationConfig::zero(), genetic_config);
     ///
     /// for genome in population.genomes() {
     ///     println!("{}", genome);
@@ -410,10 +437,12 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
     ///
-    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// # let genetic_config = GeneticConfig::zero();
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let population = Population::<_, _, G>::new(PopulationConfig::zero(), genetic_config);
     ///
     /// for species in population.species() {
     ///     println!(
@@ -431,10 +460,12 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
     ///
-    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// # let genetic_config = GeneticConfig::zero();
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let population = Population::<_, _, G>::new(PopulationConfig::zero(), genetic_config);
     ///
     /// assert_eq!(population.generation(), 0);
     /// ```
@@ -446,10 +477,12 @@ where
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
     ///
-    /// let population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// # let genetic_config = GeneticConfig::zero();
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let population = Population::<_, _, G>::new(PopulationConfig::zero(), genetic_config);
     /// let history = population.history();
     /// ```
     pub fn history(&self) -> &H {

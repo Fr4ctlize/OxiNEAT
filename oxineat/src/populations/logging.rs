@@ -23,7 +23,6 @@ pub struct Log<G> {
     pub generation_number: usize,
     pub generation_sample: GenerationMemberRecord<G>,
     pub species_count: usize,
-    pub fitness: Stats,
     pub genome_stats: Vec<(String, Stats)>,
 }
 
@@ -34,12 +33,10 @@ impl<G: Genome> fmt::Display for Log<G> {
             "Log {{\n\
             \tgeneration_number: {:?}\n\
             \tspecies_count: {:?}\n\
-            \tfitness: {:?}\n\
             {}
             }}",
             &self.generation_number,
             &self.species_count,
-            &self.fitness,
             self.genome_stats
                 .iter()
                 .map(|(name, stats)| format!("\t{}: {:?}\n", name, stats))
@@ -63,8 +60,7 @@ impl Stats {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::populations::Stats;
-    ///
+    /// use oxineat::logging::Stats;
     ///
     /// let stats = Stats::from([-2.0, -1.0, 0.5, 1.0, 1.5].iter().copied());
     /// assert_eq!(stats.maximum, 1.5);
@@ -127,9 +123,11 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::populations::{EvolutionLogger, ReportingLevel};
-    ///
-    /// let logger = EvolutionLogger::new(ReportingLevel::NoGenomes);
+    /// # use oxineat_nn::genomics::NNGenome as G;
+    /// use oxineat::logging::{EvolutionLogger, ReportingLevel};
+    /// 
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let logger = EvolutionLogger::<G>::new(ReportingLevel::NoGenomes);
     /// ```
     pub fn new(reporting_level: ReportingLevel) -> EvolutionLogger<G> {
         EvolutionLogger {
@@ -139,21 +137,25 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
     }
 
     /// Store a snapshot of a population.
+    /// 
+    /// The `genome_stat_extractor` provides a way of 
+    /// obtaining arbitrary statistics on the population,
+    /// where each statistic is named by `stat_names`.
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::GeneticConfig;
-    /// use oxineat::populations::{Population, PopulationConfig};
-    /// use oxineat::populations::{EvolutionLogger, ReportingLevel};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
+    /// use oxineat::{Population, PopulationConfig};
+    /// use oxineat::logging::{EvolutionLogger, ReportingLevel};
     ///
-    /// let mut logger = EvolutionLogger::new(ReportingLevel::NoGenomes);
-    /// let mut population = Population::new(PopulationConfig::zero(), GeneticConfig::zero());
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let mut logger = EvolutionLogger::<G>::new(ReportingLevel::NoGenomes);
+    /// # let genetic_config = GeneticConfig::zero();
+    /// let mut population = Population::new(PopulationConfig::zero(), genetic_config);
     ///
     /// // Do something with the population...
-    /// population.evolve();
-    ///
-    /// // Then log a snapshot of the population.
-    /// logger.log(&population);
+    /// // Then log a snapshot.
+    /// logger.log(&population, &|g| [g.fitness()], ["fitness"]);
     /// ```
     pub fn log<C, H, GSE, const N: usize>(
         &mut self,
@@ -165,12 +167,12 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
         G: Genome<InnovationHistory = H, Config = C>,
         GSE: Fn(&G) -> [f32; N],
     {
-        let (fitnesses, stats): (Vec<f32>, Vec<[f32; N]>) = population
+        let stats: Vec<[f32; N]> = population
             .species
             .iter()
             .flat_map(|s| s.genomes.iter())
-            .map(|g| (g.fitness(), genome_stat_extractor(g)))
-            .unzip();
+            .map(genome_stat_extractor)
+            .collect();
         let stats = stat_names
             .iter()
             .cloned()
@@ -199,23 +201,19 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
                 ReportingLevel::NoGenomes => GenerationMemberRecord::None,
             },
             species_count: population.species().count(),
-            fitness: Stats::from(fitnesses.into_iter()),
             genome_stats: stats,
         })
     }
-
-    // gene_count: Stats::from(&mut stats.iter().map(|(g, _, _)| *g)),
-    // node_count: Stats::from(&mut stats.iter().map(|(_, n, _)| *n)),
-    // max_gene_innovation: population.history().max_gene_innovation(),
-    // max_node_innovation: population.history().max_node_innovation()
 
     /// Iterate over all logged snapshots.
     ///
     /// # Examples
     /// ```
-    /// use oxineat::populations::{EvolutionLogger, ReportingLevel};
+    /// # use oxineat_nn::genomics::NNGenome as G;
+    /// use oxineat::logging::{EvolutionLogger, ReportingLevel};
     ///
-    /// let logger = EvolutionLogger::new(ReportingLevel::AllGenomes);
+    /// // With `G` a suitable type implementing `Genome`...
+    /// let logger = EvolutionLogger::<G>::new(ReportingLevel::AllGenomes);
     /// // Log some stuff... then
     /// for log in logger.iter() {
     ///     println!("{}", log);

@@ -42,12 +42,14 @@ impl<G: Genome + Clone> Species<G> {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
-    ///
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
+    /// 
+    /// // Assuming a value `representative` of a type G: Genome.
+    /// # let representative = NNGenome::new(&GeneticConfig::zero());
     /// let species = Species::new(
     ///     SpeciesID(1, 0),
-    ///     Genome::new(&GeneticConfig::zero()),
+    ///     representative,
     /// );
     /// ```
     pub fn new(id: SpeciesID, representative: G) -> Species<G> {
@@ -64,12 +66,14 @@ impl<G: Genome + Clone> Species<G> {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
     ///
+    /// // Assuming a value `representative` of a type G: Genome.
+    /// # let representative = NNGenome::new(&GeneticConfig::zero());
     /// let species = Species::new(
     ///     SpeciesID(1, 0),
-    ///     Genome::new(&GeneticConfig::zero()),
+    ///     representative,
     /// );
     ///
     /// assert_eq!(species.id(), SpeciesID(1, 0));
@@ -82,10 +86,11 @@ impl<G: Genome + Clone> Species<G> {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
     ///
-    /// let representative = Genome::new(&GeneticConfig::zero());
+    /// // Assuming a value `representative` of a type G: Genome.
+    /// # let representative = NNGenome::new(&GeneticConfig::zero());
     /// let species = Species::new(
     ///     SpeciesID(1, 0),
     ///     representative.clone(),
@@ -97,51 +102,24 @@ impl<G: Genome + Clone> Species<G> {
         &self.representative
     }
 
-    /// Returns the genetic distance between the species'
-    /// representative and `other`.
-    ///
-    /// # Examples
-    /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
-    ///
-    /// let config = GeneticConfig {
-    ///     disjoint_gene_factor: 1.0,
-    ///     excess_gene_factor: 1.0,
-    ///     common_weight_factor: 0.4,
-    ///     ..GeneticConfig::zero()
-    /// };
-    /// let representative = Genome::new(&config);
-    /// let species = Species::new(
-    ///     SpeciesID(1, 0),
-    ///     representative.clone(),
-    /// );
-    ///
-    /// assert_eq!(species.genetic_distance(&representative, &config), 0.0);
-    /// ```
-    pub fn genetic_distance<C>(&self, other: &G, config: &C) -> f32
-    where
-        G: Genome<Config = C>,
-    {
-        G::genetic_distance(&self.representative, other, config)
-    }
-
     /// Adds a genome to the species.
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
     ///
-    /// let config = GeneticConfig::zero();
+    /// // Assuming values `representative` and `genome` of a type G: Genome.
+    /// # let config = GeneticConfig::zero();
+    /// # let genome = NNGenome::new(&config);
+    /// # let representative = NNGenome::new(&config);
     /// let mut species = Species::new(
     ///     SpeciesID(1, 0),
-    ///     Genome::new(&config),
+    ///     representative,
     /// );
     ///
-    /// let genome = Genome::new(&config);
     /// species.add_genome(genome.clone());
     ///
-    /// assert!(species.genomes().find(|g| *g == &genome).is_some());
+    /// # assert!(species.genomes().find(|g| *g == &genome).is_some());
     /// ```
     pub fn add_genome(&mut self, genome: G) {
         self.genomes.push(genome);
@@ -165,23 +143,27 @@ impl<G: Genome + Clone> Species<G> {
         self.max_fitness = max_fitness;
     }
 
-    /// Returns the species' _member-count adjusted_
+    /// Returns the species' _size-adjusted_
     /// fitness. I.e., the average of the species'
     /// genome's fitnesses.
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
     ///
-    /// let config = GeneticConfig::zero();
+    /// # let config = GeneticConfig::zero();
+    /// # let representative = NNGenome::new(&config);
+    /// # let genome1 = NNGenome::new(&config);
+    /// # let genome2 = NNGenome::new(&config);
+    /// // Assuming values `representative`, `genome1`, and `genome2` of a type G: Genome.
     /// let mut species = Species::new(
     ///     SpeciesID(1, 0),
-    ///     Genome::new(&config),
+    ///     representative,
     /// );
-    ///
-    /// let mut g1 = Genome::new(&config);
-    /// let mut g2 = Genome::new(&config);
+    /// 
+    /// let mut g1 = genome1;
+    /// let mut g2 = genome2;
     /// g1.set_fitness(20.0);
     /// g2.set_fitness(30.0);
     /// species.add_genome(g1);
@@ -199,13 +181,14 @@ impl<G: Genome + Clone> Species<G> {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
     ///
-    /// let config = GeneticConfig::zero();
+    /// // Assuming a value `representative` of a type T: Genome.
+    /// # let representative = NNGenome::new(&GeneticConfig::zero());
     /// let species = Species::new(
     ///     SpeciesID(1, 0),
-    ///     Genome::new(&config),
+    ///     representative,
     /// );
     ///
     /// println!("{}", species.time_stagnated());
@@ -218,13 +201,14 @@ impl<G: Genome + Clone> Species<G> {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
     ///
-    /// let config = GeneticConfig::zero();
-    /// let mut species = Species::new(
+    /// // Assuming a value `representative` of a type T: Genome.
+    /// # let representative = NNGenome::new(&GeneticConfig::zero());
+    /// let species = Species::new(
     ///     SpeciesID(1, 0),
-    ///     Genome::new(&config),
+    ///     representative,
     /// );
     ///
     /// for g in species.genomes() {
@@ -239,14 +223,13 @@ impl<G: Genome + Clone> Species<G> {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::genomics::{GeneticConfig, Genome};
-    /// use oxineat::populations::{SpeciesID, Species};
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{SpeciesID, Species};
     ///
-    /// let config = GeneticConfig::zero();
-    ///
-    /// let mut g1 = Genome::new(&config);
-    /// let mut g2 = Genome::new(&config);
-    /// let mut g3 = Genome::new(&config);
+    /// // Assuming values `g1`, `g2` and `g3` of a type T: Genome.
+    /// # let mut g1 = NNGenome::new(&GeneticConfig::zero());
+    /// # let mut g2 = NNGenome::new(&GeneticConfig::zero());
+    /// # let mut g3 = NNGenome::new(&GeneticConfig::zero());
     /// g1.set_fitness(5.0);
     /// g2.set_fitness(20.0);
     /// g3.set_fitness(10.0);
@@ -258,6 +241,7 @@ impl<G: Genome + Clone> Species<G> {
     /// species.add_genome(g2.clone());
     /// species.add_genome(g3);
     ///
+    /// // `g2` has the highest fitness.
     /// assert_eq!(species.champion(), &g2);
     /// ```
     pub fn champion(&self) -> &G {

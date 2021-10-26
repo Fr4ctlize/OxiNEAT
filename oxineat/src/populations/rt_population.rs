@@ -40,11 +40,11 @@ where
         unimplemented!()
     }
 
-    pub fn removeGenomes<const N: usize>(&mut self, tokens: &[GenomeToken; N]) -> Option<G> {
+    pub fn remove_genomes<const N: usize>(&mut self, tokens: &[GenomeToken; N]) -> Option<G> {
         unimplemented!()
     }
 
-    pub fn replaceGenomes<F, P, T, const N: usize>(
+    pub fn replace_genomes<F, P, T, const N: usize>(
         &mut self,
         tokens: &[GenomeToken; N],
         f: F,
@@ -57,7 +57,7 @@ where
         unimplemented!()
     }
 
-    pub fn addChild<P, T>(
+    pub fn add_child<P, T>(
         &mut self,
         parent1: GenomeToken,
         parent2: GenomeToken,

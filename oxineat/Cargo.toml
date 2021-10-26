@@ -14,3 +14,6 @@ keywords = ["neat", "neuroevolution"]
 rand = "0.8.3"
 serde = { version = "1.0.129", features = ["derive"] }
 ahash = "0.7.4"
+
+[dev-dependencies]
+oxineat-nn = { path = "../oxineat-nn" }

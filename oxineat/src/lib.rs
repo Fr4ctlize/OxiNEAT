@@ -14,15 +14,11 @@
 //! This is still very much a work-in-progress, so interfaces and implementations
 //! may change in the future.
 //! 
-//! # Usage example
-//! The following is an implementation of the classic XOR problem:
-//! 
+//! # Example usage: Evolution of XOR function approximator, using `OxiNEAT-NN` for `Genome` implementation
 //! ```
-//! use oxineat::{
-//!     populations::{Population, PopulationConfig},
-//! };
-//! use oxineat_default::{
-//!     genomics::{ActivationType, GeneticConfig, Genome},
+//! use oxineat::{Population, PopulationConfig};
+//! use oxineat_nn::{
+//!     genomics::{ActivationType, GeneticConfig, NNGenome},
 //!     networks::FunctionApproximatorNetwork,
 //! };
 //! use std::num::NonZeroUsize;
@@ -30,8 +26,8 @@
 //! // Allowed error margin for neural net answers.
 //! const ERROR_MARGIN: f32 = 0.3;
 //! 
-//! fn evaluate_xor(genome: &Genome) -> f32 {
-//!     let mut network = FunctionApproximatorNetwork::new::<1>(genome);
+//! fn evaluate_xor(genome: &NNGenome) -> f32 {
+//!     let mut network = FunctionApproximatorNetwork::from::<1>(genome);
 //!
 //!     let values = [
 //!         ([1.0, 0.0, 0.0], 0.0),
@@ -76,7 +72,7 @@
 //!     };
 //!
 //!     let population_config = PopulationConfig {
-//!         population_size: NonZeroUsize::new(150).unwrap(),
+//!         size: NonZeroUsize::new(150).unwrap(),
 //!         distance_threshold: 3.0,
 //!         elitism: 1,
 //!         survival_threshold: 0.2,
@@ -102,7 +98,8 @@
 //! }
 //! ```
 
-pub mod populations;
+mod populations;
 mod genome;
 
 pub use genome::*;
+pub use populations::*;

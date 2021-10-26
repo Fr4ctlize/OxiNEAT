@@ -11,7 +11,7 @@ use std::num::NonZeroUsize;
 #[derive(Clone, Debug)]
 pub struct PopulationConfig {
     /// Size of the population.
-    pub population_size: NonZeroUsize,
+    pub size: NonZeroUsize,
     /// Genetic distance threshold, beyond which
     /// genomes are considered as belonging to
     /// different species.
@@ -56,7 +56,7 @@ impl PopulationConfig {
     ///
     /// # Examples
     /// ```
-    /// use oxineat::populations::PopulationConfig;
+    /// use oxineat::PopulationConfig;
     ///
     /// let cfg1 = PopulationConfig::zero();
     ///
@@ -66,12 +66,13 @@ impl PopulationConfig {
     ///     // Default the rest...
     ///     ..PopulationConfig::zero()
     /// };
+    /// ```
     pub const fn zero() -> PopulationConfig {
         PopulationConfig {
             // SAFETY: 1 is a valid NonZeroUsize. Replace this with
             // NonZeroUsize::new(1).unwrap() once const Option::unwrap 
             // becomes stable.
-            population_size: unsafe { NonZeroUsize::new_unchecked(1) },
+            size: unsafe { NonZeroUsize::new_unchecked(1) },
             distance_threshold: 0.0,
             elitism: 0,
             survival_threshold: 0.0,

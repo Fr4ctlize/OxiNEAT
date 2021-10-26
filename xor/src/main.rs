@@ -57,7 +57,7 @@ fn main() {
         ..GeneticConfig::zero()
     };
     let population_config = PopulationConfig {
-        population_size: NonZeroUsize::new(150).unwrap(),
+        size: NonZeroUsize::new(150).unwrap(),
         distance_threshold: 3.0,
         elitism: 1,
         survival_threshold: 0.2,

@@ -1,7 +1,7 @@
 //! This implementation of the `Genome` trait is a collection of genes and
 //! nodes that can be instantiated as a phenotype (a neural network). [`NNGenomes`]
 //! can be progressively mutated, thus adding complexity and functionality.
-//! 
+//!
 //! [`NNGenomes`]: crate::genomics::NNGenome
 
 mod config;
@@ -23,7 +23,7 @@ use oxineat::Genome;
 use rand::prelude::{IteratorRandom, Rng, SliceRandom};
 use serde::{Deserialize, Serialize};
 
-use std::collections::hash_map::HashMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
@@ -66,6 +66,50 @@ impl Genome for NNGenome {
 
     fn fitness(&self) -> f32 {
         self.fitness()
+    }
+
+    fn conforms_to(&self, config: &GeneticConfig) -> bool {
+        let mut input_count = 0;
+        let mut output_count = 0;
+        let mut output_activation_types = vec![];
+
+        for node in self.nodes.values() {
+            match node.node_type() {
+                NodeType::Sensor => {
+                    input_count += 1;
+                }
+                NodeType::Actuator => {
+                    output_count += 1;
+                    output_activation_types.push((node.innovation(), node.activation_type()));
+                }
+                _ => {
+                    if !config.activation_types.contains(&node.activation_type()) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        output_activation_types.sort_unstable_by_key(|(id, _)| *id);
+        let output_activation_types = output_activation_types
+            .into_iter()
+            .map(|(_, t)| t)
+            .collect::<Vec<_>>();
+
+        let recursion_disabled = config.recursion_chance == 0.0;
+        for gene in self.genes.values() {
+            if gene.weight().abs() >= config.weight_bound {
+                return false;
+            }
+            if recursion_disabled && gene.input() == gene.output() {
+                return false;
+            }
+        }
+
+        input_count == config.input_count.get()
+            && output_count == config.output_count.get()
+            && output_activation_types[..config.output_activation_types.len()]
+                == config.output_activation_types
     }
 }
 
@@ -1111,7 +1155,7 @@ impl NNGenome {
         }
     }
 
-        /// Calculates the _genetic distance_ between `self` and `other`,
+    /// Calculates the _genetic distance_ between `self` and `other`,
     /// weighting node and weight differences as specified in `config`.
     ///
     /// # Examples

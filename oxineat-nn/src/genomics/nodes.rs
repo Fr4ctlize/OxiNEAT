@@ -11,7 +11,7 @@ use std::fmt;
 /// An ActivationType represents the type
 /// of activation function the node's network
 /// equivalent will use.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ActivationType {
     // 1 / (1 + exp(-4.9x))
@@ -29,7 +29,7 @@ pub enum ActivationType {
 
 /// A NodeType indicates the function of
 /// the node's network equivalent.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum NodeType {
     /// Input nodes.
     Sensor,

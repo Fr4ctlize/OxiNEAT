@@ -33,15 +33,11 @@ where
 {
     /// Creates a new population using the passed configurations.
     ///
-    /// These configurations shouldn't be modified once evolution
-    /// begins, thus they are copied and kept by the population for
-    /// the duration of its lifetime.
-    /// 
     /// The type of `genetic_config` depends on the implementation
     /// of [`Genome`], and is effectively opaque to the population.
     ///
     /// [`Genome`]: crate::Genome
-    /// 
+    ///
     /// # Examples
     /// ```
     /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome as G};
@@ -52,7 +48,7 @@ where
     ///     ..PopulationConfig::zero()
     /// };
     /// # let genetic_config = GeneticConfig::zero();
-    /// 
+    ///
     /// // With `G` a suitable type implementing `Genome`...
     /// let population = Population::<_, _, G>::new(pop_config, genetic_config);
     /// ```
@@ -63,9 +59,8 @@ where
         Population {
             species: {
                 let mut s0 = Species::new(SpeciesID(0, 0), G::new(&genetic_config));
-                s0.genomes.extend(
-                    (1..population_config.size.get()).map(|_| G::new(&genetic_config)),
-                );
+                s0.genomes
+                    .extend((1..population_config.size.get()).map(|_| G::new(&genetic_config)));
                 vec![s0]
             },
             history: H::new(&genetic_config),
@@ -74,6 +69,87 @@ where
             population_config,
             genetic_config,
         }
+    }
+
+    /// Creates a new population using the passed configurations,
+    /// and seeds it with the specified genomes. Each seed genome
+    /// gets its own species, and species sizes are all approximately
+    /// equal, as allowed by the configured population size.
+    /// 
+    /// Returns `None` if either the configured population size is
+    /// lesser than the number of seed genomes, or any of the genomes
+    /// are incompatible with the specified genetic config, as established
+    /// by [`Genome::conforms_to`].
+    ///
+    /// The type of `genetic_config` depends on the implementation
+    /// of [`Genome`], and is effectively opaque to the population.
+    ///
+    /// [`Genome`]: crate::Genome
+    /// [`Genome::conforms_to`]: crate::Genome::conforms_to
+    ///
+    /// # Examples
+    /// ```
+    /// # use oxineat_nn::genomics::{GeneticConfig, NNGenome};
+    /// use oxineat::{Population, PopulationConfig};
+    ///
+    /// let pop_config = PopulationConfig {
+    ///     // Set desired configuration
+    ///     size: std::num::NonZeroUsize::new(100).unwrap(),
+    ///     ..PopulationConfig::zero()
+    /// };
+    /// # let genetic_config = GeneticConfig {
+    /// #     weight_bound: 1.0,
+    /// #     ..GeneticConfig::zero()
+    /// # };
+    /// # let g1 = NNGenome::new(&genetic_config);
+    /// # let g2 = NNGenome::new(&genetic_config);
+    /// # let seed = [g1, g2];
+    ///
+    /// // With `seed` a slice of a suitable type implementing `Genome`...
+    /// let population = Population::new_seeded(&seed, pop_config, genetic_config).unwrap();
+    /// ```
+    pub fn new_seeded(
+        genomes: &[G],
+        population_config: PopulationConfig,
+        genetic_config: C,
+    ) -> Option<Population<C, H, G>>
+    where
+        H: InnovationHistory<Config = C>,
+    {
+        if population_config.size.get() < genomes.len() {
+            return None;
+        }
+
+        if !genomes.iter().all(|g| g.conforms_to(&genetic_config)) {
+            return None;
+        }
+
+        Some(Population {
+            species: {
+                let mut species: Vec<Species<G>> = genomes
+                    .iter()
+                    .cloned()
+                    .enumerate()
+                    .map(|(i, representative)| Species::new(SpeciesID(0, i), representative))
+                    .collect();
+                let clone_counts = round_retain_sum(&vec![
+                    population_config.size.get() as f32
+                        / genomes.len() as f32;
+                    genomes.len()
+                ]);
+                for (s, count) in species.iter_mut().zip(clone_counts) {
+                    for _ in 0..count - 1 {
+                        s.add_genome(s.representative().clone());
+                    }
+                }
+                species
+            },
+            history: H::new(&genetic_config),
+            generation: 0,
+            historical_species_count: 1,
+            population_config,
+            genetic_config,
+        })
     }
 
     /// Evaluates the fitness of each genome in the
@@ -520,9 +596,9 @@ fn round_retain_sum(values: &[f32]) -> Vec<usize> {
 mod tests {
     #[test]
     fn round_retain_sum() {
-        let v = [5.2, 9.5, 2.8, 1.3, 2.2, 2.7, 6.3];
+        let v = [5.2, 9.5, 2.8, 1.3, 2.2, 2.7, 6.3, 1.0000000000001, 0.9999999999999];
         let w = super::round_retain_sum(&v);
         assert_eq!(v.iter().sum::<f32>(), w.iter().sum::<usize>() as f32);
-        assert_eq!(w, [5, 10, 3, 1, 2, 3, 6]);
+        assert_eq!(w, [5, 10, 3, 1, 2, 3, 6, 1, 1]);
     }
 }

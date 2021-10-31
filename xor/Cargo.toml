@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-oxineat = "0.3.0"
-oxineat-nn = "0.1.0"
+oxineat = { path = "../oxineat" }
+oxineat-nn = { path = "../oxineat-nn" }
 rayon = "1.5.1"
+ron = "0.7.0"

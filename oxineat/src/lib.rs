@@ -20,6 +20,7 @@
 //!     genomics::{ActivationType, GeneticConfig, NNGenome},
 //!     networks::FunctionApproximatorNetwork,
 //! };
+//! use serde_json;
 //! use std::num::NonZeroUsize;
 //! 
 //! // Allowed error margin for neural net answers.
@@ -86,7 +87,7 @@
 //!     for _ in 0..100 {
 //!         population.evaluate_fitness(evaluate_xor);
 //!         if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {
-//!             println!("Solution found: {}", population.champion());
+//!             println!("Solution found!: {}", serde_json::to_string(&population.champion()).unwrap());
 //!             break;
 //!         }
 //!         if let Err(e) = population.evolve() {

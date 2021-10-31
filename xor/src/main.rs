@@ -4,9 +4,10 @@ use oxineat::{Population, PopulationConfig, logging::Stats};
 // use neat::populations::{EvolutionLogger, ReportingLevel};
 
 use std::num::NonZeroUsize;
+use std::sync::{Arc, Mutex};
 
 use rayon::prelude::*;
-use std::sync::{Arc, Mutex};
+use ron;
 
 const ERROR_MARGIN: f32 = 0.3;
 
@@ -68,9 +69,11 @@ fn main() {
         stagnation_penalty: 1.0,
     };
 
-    // let logger = Arc::new(Mutex::new(EvolutionLogger::new(
-    // ReportingLevel::SpeciesChampions,
-    // )));
+    // stress_test(&genetic_config, &population_config);
+    serde_test(&genetic_config, &population_config);
+}
+
+fn stress_test(genetic_config: &GeneticConfig, population_config: &PopulationConfig) {
     let generations = Arc::new(Mutex::new(vec![]));
 
     const ITERATIONS: usize = 2000;
@@ -112,4 +115,33 @@ fn main() {
         generations.iter().filter(|g| g.is_none()).count() as f32 * 100.0 / ITERATIONS as f32,
         ITERATIONS
     );
+}
+
+fn serde_test(genetic_config: &GeneticConfig, population_config: &PopulationConfig) {
+    let mut pop = "".into();
+    let mut population = Population::new(population_config.clone(), genetic_config.clone());
+    for _ in 0..100 {
+        population.evaluate_fitness(evaluate_xor);
+        if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {
+            println!("{}", ron::to_string(&population.champion()).unwrap());
+            pop = ron::to_string(&population).unwrap();
+            break;
+        }
+        if let Err(e) = population.evolve() {
+            eprintln!("{}", e);
+            break;
+        }
+    }
+    let mut population: Population<_, _, _> = ron::from_str(&pop).unwrap();
+    for _ in 0..100 {
+        population.evaluate_fitness(evaluate_xor);
+        if (population.champion().fitness() - 16.0).abs() < f32::EPSILON {
+            println!("{}", population.champion());
+            break;
+        }
+        if let Err(e) = population.evolve() {
+            eprintln!("{}", e);
+            break;
+        }
+    }
 }

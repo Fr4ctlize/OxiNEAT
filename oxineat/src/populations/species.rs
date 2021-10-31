@@ -1,6 +1,8 @@
 use crate::populations::PopulationConfig;
 use crate::Genome;
 
+use serde::{Deserialize, Serialize};
+
 /// Species identifier. Specifies
 /// the generation in which the species
 /// was born, and the count of other species
@@ -8,7 +10,7 @@ use crate::Genome;
 /// the one identified (i.e, if it was the
 /// third species born in generation 5, it
 /// will be species [5, 2]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct SpeciesID(pub usize, pub usize);
 
 /// Species are collections of reproductively
@@ -26,7 +28,7 @@ pub struct SpeciesID(pub usize, pub usize);
 ///
 /// [genetic distance]: PopulationConfig::distance_threshold
 /// [`stagnation_threshold`]: PopulationConfig::survival_threshold
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Species<G> {
     id: SpeciesID,
     pub(super) genomes: Vec<G>,

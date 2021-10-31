@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use std::num::NonZeroUsize;
 
 /// Configuration data for population generation
@@ -8,7 +10,7 @@ use std::num::NonZeroUsize;
 /// should be in the range [0.0, 1.0]. Using
 /// values that are not in this bound may result
 /// in odd behaviours and/or incorrect programs.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PopulationConfig {
     /// Size of the population.
     pub size: NonZeroUsize,

@@ -16,8 +16,10 @@ use offspring_factory::OffspringFactory;
 pub use species::{Species, SpeciesID};
 
 use rand::prelude::Rng;
+use serde::{Deserialize, Serialize};
 
 /// A population of genomes.
+#[derive(Serialize, Deserialize)]
 pub struct Population<C, H, G> {
     species: Vec<Species<G>>,
     history: H,
@@ -72,10 +74,12 @@ where
     }
 
     /// Creates a new population using the passed configurations,
-    /// and seeds it with the specified genomes. Each seed genome
-    /// gets its own species, and species sizes are all approximately
-    /// equal, as allowed by the configured population size.
-    /// 
+    /// and seeds it with the specified genomes. Each array of genomes
+    /// is assigned to its own species, with the first as the
+    /// species representative. If the number of seed genomes is not
+    /// as large as the configured population size, the remaining
+    /// space is filled as during normal population
+    ///
     /// Returns `None` if either the configured population size is
     /// lesser than the number of seed genomes, or any of the genomes
     /// are incompatible with the specified genetic config, as established
@@ -103,50 +107,64 @@ where
     /// # };
     /// # let g1 = NNGenome::new(&genetic_config);
     /// # let g2 = NNGenome::new(&genetic_config);
-    /// # let seed = [g1, g2];
+    /// # let g3 = NNGenome::new(&genetic_config);
     ///
     /// // With `seed` a slice of a suitable type implementing `Genome`...
-    /// let population = Population::new_seeded(&seed, pop_config, genetic_config).unwrap();
+    /// let population = Population::new_seeded(vec![vec![g1, g2], vec![g3]], pop_config, genetic_config).unwrap();
+    ///
+    /// # assert_eq!(population.species().count(), 3);
+    /// # assert_eq!(population.species().map(|s| s.genomes().count()).collect::<Vec<_>>(), vec![97, 2, 1]);
     /// ```
     pub fn new_seeded(
-        genomes: &[G],
+        genomes: Vec<Vec<G>>,
         population_config: PopulationConfig,
         genetic_config: C,
     ) -> Option<Population<C, H, G>>
     where
         H: InnovationHistory<Config = C>,
     {
-        if population_config.size.get() < genomes.len() {
+        let seed_count = genomes.iter().map(|v| v.len()).sum();
+        if population_config.size.get() < seed_count {
             return None;
         }
 
-        if !genomes.iter().all(|g| g.conforms_to(&genetic_config)) {
+        if !genomes
+            .iter()
+            .map(|v| v.iter())
+            .flatten()
+            .all(|g| g.conforms_to(&genetic_config))
+        {
             return None;
         }
+
+        let species: Vec<Species<G>> = std::iter::once({
+            let mut s0 = Species::new(SpeciesID(0, 0), G::new(&genetic_config));
+            s0.genomes.extend(
+                (1..population_config.size.get() - seed_count).map(|_| G::new(&genetic_config)),
+            );
+            s0
+        })
+        .chain(
+            genomes
+                .into_iter()
+                .filter(|v| !v.is_empty())
+                .enumerate()
+                .map(|(i, mut genomes)| {
+                    let mut s = Species::new(SpeciesID(0, i + 1), genomes.swap_remove(0));
+                    for g in genomes {
+                        s.add_genome(g.clone())
+                    }
+                    s
+                }),
+        )
+        .collect();
+        let species_count = species.len();
 
         Some(Population {
-            species: {
-                let mut species: Vec<Species<G>> = genomes
-                    .iter()
-                    .cloned()
-                    .enumerate()
-                    .map(|(i, representative)| Species::new(SpeciesID(0, i), representative))
-                    .collect();
-                let clone_counts = round_retain_sum(&vec![
-                    population_config.size.get() as f32
-                        / genomes.len() as f32;
-                    genomes.len()
-                ]);
-                for (s, count) in species.iter_mut().zip(clone_counts) {
-                    for _ in 0..count - 1 {
-                        s.add_genome(s.representative().clone());
-                    }
-                }
-                species
-            },
+            species: species,
             history: H::new(&genetic_config),
             generation: 0,
-            historical_species_count: 1,
+            historical_species_count: species_count,
             population_config,
             genetic_config,
         })
@@ -596,7 +614,17 @@ fn round_retain_sum(values: &[f32]) -> Vec<usize> {
 mod tests {
     #[test]
     fn round_retain_sum() {
-        let v = [5.2, 9.5, 2.8, 1.3, 2.2, 2.7, 6.3, 1.0000000000001, 0.9999999999999];
+        let v = [
+            5.2,
+            9.5,
+            2.8,
+            1.3,
+            2.2,
+            2.7,
+            6.3,
+            1.0000000000001,
+            0.9999999999999,
+        ];
         let w = super::round_retain_sum(&v);
         assert_eq!(v.iter().sum::<f32>(), w.iter().sum::<usize>() as f32);
         assert_eq!(w, [5, 10, 3, 1, 2, 3, 6, 1, 1]);

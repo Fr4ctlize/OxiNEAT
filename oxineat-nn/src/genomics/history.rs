@@ -3,6 +3,7 @@ use crate::Innovation;
 
 use ahash::RandomState;
 use oxineat::InnovationHistory;
+use serde::{Deserialize, Serialize};
 
 use std::collections::hash_map::{Entry, HashMap};
 
@@ -18,7 +19,7 @@ use std::collections::hash_map::{Entry, HashMap};
 /// identical mutations, and the innovation numbers for the
 /// corresponding input gene, new node, and output gene are
 /// recorded, in that order.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct History {
     next_gene_innovation: Innovation,
     next_node_innovation: Innovation,

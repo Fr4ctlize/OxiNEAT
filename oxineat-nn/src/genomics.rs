@@ -969,15 +969,28 @@ impl NNGenome {
     /// for its presence.
     fn remove_node_unchecked(&mut self, node_id: Innovation) -> (Node, Vec<Gene>, Vec<Gene>) {
         let node = self.nodes.remove(&node_id).unwrap();
-        let input_genes = node
+        let input_genes: Vec<Gene> = node
             .input_genes()
             .copied()
             .map(|gene_id| self.remove_gene_unchecked(gene_id))
             .collect();
+        let recursive_gene = input_genes
+            .iter()
+            .filter(|gene| gene.input() == gene.output())
+            .next();
         let output_genes = node
             .output_genes()
             .copied()
-            .map(|gene_id| self.remove_gene_unchecked(gene_id))
+            .map(|gene_id| match recursive_gene {
+                None => self.remove_gene_unchecked(gene_id),
+                Some(gene) => {
+                    if gene.innovation() == gene_id {
+                        gene.clone()
+                    } else {
+                        self.remove_gene_unchecked(gene_id)
+                    }
+                }
+            })
             .collect();
 
         (node, input_genes, output_genes)

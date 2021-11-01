@@ -1,6 +1,6 @@
 [package]
 name = "oxineat"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2018"
 license = "MIT"
 description = "A Rust implementation of NeuroEvolution of Augmenting Topologies"
@@ -15,6 +15,6 @@ ahash = "0.7.4"
 serde = { version = "1.0.129", features = ["derive"] }
 
 [dev-dependencies]
-oxineat-nn.version = "0.1.0"
+oxineat-nn.version = "0.1.1"
 oxineat-nn.path = "../oxineat-nn"
 serde_json = "1.0"

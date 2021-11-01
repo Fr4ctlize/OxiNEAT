@@ -589,36 +589,6 @@ impl NNGenome {
             .collect()
     }
 
-    /// Randomly chooses a node from `potential_outputs` that
-    /// `candidate_input` could be linked to by a new gene.
-    fn choose_output_node_for(
-        &self,
-        candidate_input: &Innovation,
-        potential_outputs: &HashSet<Innovation, RandomState>,
-        config: &GeneticConfig,
-    ) -> Option<Innovation> {
-        let mut rng = rand::thread_rng();
-
-        let candidate_input = &self.nodes[candidate_input];
-        if candidate_input.node_type() != NodeType::Sensor
-            && rng.gen::<f32>() < config.recursion_chance
-        {
-            Some(candidate_input.innovation())
-        } else {
-            let mut candidate_outputs = potential_outputs - &self.output_nodes_of(candidate_input);
-            candidate_outputs.remove(&candidate_input.innovation());
-            candidate_outputs.iter().choose(&mut rng).copied()
-        }
-    }
-
-    /// Returns the set of all nodes that are outputs
-    /// of an output gene of `node`.
-    fn output_nodes_of(&self, node: &Node) -> HashSet<Innovation, RandomState> {
-        node.output_genes()
-            .map(|id| self.genes[id].output())
-            .collect()
-    }
-
     /// Returns the first member of `potential_inputs ⨯ potential_outputs`
     /// that is computed.
     fn find_node_pair(
@@ -635,6 +605,38 @@ impl NNGenome {
                     .map(|output| (*i, output))
             })
             .next()
+    }
+
+    /// Randomly chooses a node from `potential_outputs` that
+    /// `candidate_input` could be linked to by a new gene.
+    fn choose_output_node_for(
+        &self,
+        candidate_input: &Innovation,
+        potential_outputs: &HashSet<Innovation, RandomState>,
+        config: &GeneticConfig,
+    ) -> Option<Innovation> {
+        let mut rng = rand::thread_rng();
+
+        let candidate_input = &self.nodes[candidate_input];
+        let mut candidate_outputs = potential_outputs - &self.output_nodes_of(candidate_input);
+
+        if candidate_input.node_type() != NodeType::Sensor
+            && candidate_outputs.contains(&candidate_input.innovation())
+            && rng.gen::<f32>() < config.recursion_chance
+        {
+            Some(candidate_input.innovation())
+        } else {
+            candidate_outputs.remove(&candidate_input.innovation());
+            candidate_outputs.iter().choose(&mut rng).copied()
+        }
+    }
+
+    /// Returns the set of all output nodes of
+    /// output genes of `node`.
+    fn output_nodes_of(&self, node: &Node) -> HashSet<Innovation, RandomState> {
+        node.output_genes()
+            .map(|id| self.genes[id].output())
+            .collect()
     }
 
     /// Adds the result of a gene mutation

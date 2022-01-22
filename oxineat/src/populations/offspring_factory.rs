@@ -1,10 +1,8 @@
-use crate::populations::{PopulationConfig, Species, SpeciesID};
-use crate::{Genome, InnovationHistory};
-
-use ahash::RandomState;
+use crate::{Genome, InnovationHistory, PopulationConfig, Species, SpeciesID};
 
 use std::collections::HashMap;
 
+use ahash::RandomState;
 use rand::{
     seq::{IteratorRandom, SliceRandom},
     Rng,
@@ -91,10 +89,6 @@ where
         species_offspring: &mut HashMap<SpeciesID, Vec<G>, RandomState>,
         species_index: usize,
     ) {
-        // We need to get the species this way to avoid
-        // problems with the borrow-checker, as it can't
-        // see that we aren't touching it when we modify
-        // self.history.
         let species = &self.species[species_index];
         let survivors = species.count_survivors(self.population_config);
         let eligible_parents: Vec<&G> = species.genomes[..survivors].iter().collect();

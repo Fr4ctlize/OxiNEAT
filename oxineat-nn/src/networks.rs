@@ -2,14 +2,14 @@
 //! with suppressed genes being ignored. [`Gene`]s are
 //! converted into connections, and [`Node`]s
 //! into network nodes.
-//! 
+//!
 //! The [`RealTimeNetwork`] type is best suited for real-time
 //! control tasks, with new inputs set for each activation,
 //! and multiple time-steps involved.
-//! 
+//!
 //! For a more instantaneous input-result use-case, the
 //! [`FunctionApproximatorNetwork`] type is more appropiate.
-//! 
+//!
 //! [`NNGenome`]: crate::genomics::NNGenome
 //! [`Gene`]: crate::genomics::Gene
 //! [`Node`]: crate::genomics::Node
@@ -18,16 +18,16 @@
 mod connection;
 mod function_approximator;
 
+use connection::Connection;
 pub use function_approximator::FunctionApproximatorNetwork;
 
 use crate::genomics::{ActivationType, NNGenome, NodeType};
 use crate::Innovation;
-use connection::Connection;
-
-use ahash::RandomState;
 
 use std::collections::HashMap;
 use std::fmt;
+
+use ahash::RandomState;
 
 /// An arbitrarily-structured neural network.
 #[derive(Clone, Debug)]
@@ -41,9 +41,9 @@ pub struct RealTimeNetwork {
     connections: Box<[Box<[Connection]>]>,
 }
 
-impl RealTimeNetwork {
+impl From<&NNGenome> for RealTimeNetwork {
     /// Generates a new network from the passed genome.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::{
@@ -59,10 +59,10 @@ impl RealTimeNetwork {
     ///     weight_bound: 5.0,
     ///     ..GeneticConfig::zero()
     /// });
-    /// 
+    ///
     /// let network = RealTimeNetwork::from(&genome);
     /// ```
-    pub fn from(genome: &NNGenome) -> RealTimeNetwork {
+    fn from(genome: &NNGenome) -> RealTimeNetwork {
         let mut input_nodes = vec![];
         let mut output_nodes = vec![];
         let mut hidden_nodes = vec![];
@@ -112,11 +112,13 @@ impl RealTimeNetwork {
             connections: connections.into_iter().map(|v| v.into()).collect(),
         }
     }
+}
 
+impl RealTimeNetwork {
     /// Fires all nodes, propagating all activations
     /// (including set inputs), and then computing
     /// new activation levels.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::{
@@ -133,12 +135,12 @@ impl RealTimeNetwork {
     /// });
     /// genome.add_gene(0, 0, 2, 2.5).unwrap();
     /// genome.add_gene(1, 1, 2, -2.5).unwrap();
-    /// 
+    ///
     /// let mut network = RealTimeNetwork::from(&genome);
     /// network.set_inputs(&[0.5, 1.0]);
-    /// 
+    ///
     /// network.activate();
-    /// 
+    ///
     /// assert_eq!(network.outputs()[0], ((0.5 * 2.5 + 1.0 * (-2.5)) as f32).max(0.0));
     /// ```
     pub fn activate(&mut self) {
@@ -175,26 +177,26 @@ impl RealTimeNetwork {
     }
 
     /// Clears the activation state of all nodes.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::{
     ///     genomics::{GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
-    /// 
+    ///
     /// let genome = NNGenome::new(&GeneticConfig{
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// });
-    /// 
+    ///
     /// let mut network = RealTimeNetwork::from(&genome);
     /// network.set_inputs(&[1.0]);
     /// network.activate();
     /// assert_ne!(network.outputs()[0], 0.0);
-    /// 
+    ///
     /// network.clear_state();
-    /// 
+    ///
     /// assert_eq!(network.outputs()[0], 0.0);
     /// ```
     pub fn clear_state(&mut self) {
@@ -214,19 +216,19 @@ impl RealTimeNetwork {
     /// # Errors
     /// This function panics if the length of the passed
     /// slice is not equal to the number of inputs in the network.
-    /// 
+    ///
     /// /// # Examples
     /// ```
     /// use oxineat_nn::{
     ///     genomics::{GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
-    /// 
+    ///
     /// let genome = NNGenome::new(&GeneticConfig{
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// });
-    /// 
+    ///
     /// let mut network = RealTimeNetwork::from(&genome);
     /// network.set_inputs(&[1.0]);
     /// ```
@@ -236,22 +238,22 @@ impl RealTimeNetwork {
 
     /// Returns the current output node activation levels
     /// as a vector.
-    /// 
+    ///
     /// /// # Examples
     /// ```
     /// use oxineat_nn::{
     ///     genomics::{GeneticConfig, NNGenome},
     ///     networks::RealTimeNetwork,
     /// };
-    /// 
+    ///
     /// let genome = NNGenome::new(&GeneticConfig{
     ///     initial_expression_chance: 1.0,
     ///     ..GeneticConfig::zero()
     /// });
-    /// 
+    ///
     /// let mut network = RealTimeNetwork::from(&genome);
     /// assert_eq!(network.outputs()[0], 0.0);
-    /// 
+    ///
     /// network.set_inputs(&[1.0]);
     /// network.activate();
     /// assert_ne!(network.outputs()[0], 0.0);
@@ -303,7 +305,9 @@ mod tests {
         let weights = [1.0, 1.0, 2.5, -2.0, -1.0, -1.5, 3.2];
 
         for i in 0..7 {
-            genome.add_gene(ids[i], inputs[i], outputs[i], weights[i]).unwrap();
+            genome
+                .add_gene(ids[i], inputs[i], outputs[i], weights[i])
+                .unwrap();
         }
         // Suppressed gene shouldn't be expressed in network.
         genome.add_gene(1, 0, 3, -1.0).unwrap().set_suppressed(true);

@@ -12,7 +12,7 @@ use ron;
 const ERROR_MARGIN: f32 = 0.3;
 
 fn evaluate_xor(genome: &NNGenome) -> f32 {
-    let mut network = FunctionApproximatorNetwork::from::<1>(genome);
+    let mut network = FunctionApproximatorNetwork::<1>::from(genome);
 
     let values = [
         ([1.0, 0.0, 0.0], 0.0),
@@ -69,15 +69,16 @@ fn main() {
         stagnation_penalty: 1.0,
     };
 
-    // stress_test(&genetic_config, &population_config);
-    serde_test(&genetic_config, &population_config);
+    stress_test(&genetic_config, &population_config);
+    // serde_test(&genetic_config, &population_config);
+    // memory_test(&genetic_config, &population_config);
 }
 
 fn stress_test(genetic_config: &GeneticConfig, population_config: &PopulationConfig) {
     let generations = Arc::new(Mutex::new(vec![]));
 
     const ITERATIONS: usize = 2000;
-    (0..ITERATIONS).into_par_iter().for_each(|_| {
+    (0..ITERATIONS).for_each(|_| {
         let mut population = Population::new(population_config.clone(), genetic_config.clone());
         for _ in 0..100 {
             population.evaluate_fitness(evaluate_xor);
@@ -139,6 +140,17 @@ fn serde_test(genetic_config: &GeneticConfig, population_config: &PopulationConf
             println!("{}", population.champion());
             break;
         }
+        if let Err(e) = population.evolve() {
+            eprintln!("{}", e);
+            break;
+        }
+    }
+}
+
+fn memory_test(genetic_config: &GeneticConfig, population_config: &PopulationConfig) {
+    let mut population = Population::new(population_config.clone(), genetic_config.clone());
+    for _ in 0..10000 {
+        population.evaluate_fitness(evaluate_xor);
         if let Err(e) = population.evolve() {
             eprintln!("{}", e);
             break;

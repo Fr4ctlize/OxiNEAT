@@ -10,6 +10,8 @@ pub trait Genome {
     fn genetic_distance(first: &Self, second: &Self, config: &Self::Config) -> f32;
 
     /// Combines two genomes and returns a "child" genome.
+    /// 
+    /// It is possible for both parents to be the same genome.
     fn mate(
         parent1: &Self,
         parent2: &Self,

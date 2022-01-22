@@ -1,8 +1,8 @@
 use crate::genomics::ActivationType;
 
-use serde::{Deserialize, Serialize};
-
 use std::num::NonZeroUsize;
+
+use serde::{Deserialize, Serialize};
 
 /// Configuration data for genome generation
 /// and inter-genome operations.
@@ -104,6 +104,9 @@ impl GeneticConfig {
             // NonZeroUsize::new(1).unwrap() once const Option::unwrap
             // becomes stable.
             input_count: unsafe { NonZeroUsize::new_unchecked(1) },
+            // SAFETY: 1 is a valid NonZeroUsize. Replace this with
+            // NonZeroUsize::new(1).unwrap() once const Option::unwrap
+            // becomes stable.
             output_count: unsafe { NonZeroUsize::new_unchecked(1) },
             activation_types: vec![],
             output_activation_types: vec![],

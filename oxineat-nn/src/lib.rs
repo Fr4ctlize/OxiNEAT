@@ -23,7 +23,7 @@
 //! const ERROR_MARGIN: f32 = 0.3;
 //! 
 //! fn evaluate_xor(genome: &NNGenome) -> f32 {
-//!     let mut network = FunctionApproximatorNetwork::from::<1>(genome);
+//!     let mut network = FunctionApproximatorNetwork::<1>::from(genome);
 //!
 //!     let values = [
 //!         ([1.0, 0.0, 0.0], 0.0),

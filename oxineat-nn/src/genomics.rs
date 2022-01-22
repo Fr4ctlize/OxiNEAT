@@ -18,15 +18,15 @@ pub use nodes::{ActivationType, Node, NodeType};
 
 use crate::Innovation;
 
-use ahash::RandomState;
-use oxineat::Genome;
-use rand::prelude::{IteratorRandom, Rng, SliceRandom};
-use serde::{Deserialize, Serialize};
-
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
+
+use ahash::RandomState;
+use oxineat::Genome;
+use rand::prelude::{IteratorRandom, Rng, SliceRandom};
+use serde::{Deserialize, Serialize};
 
 /// A mutable collection of genes and nodes.
 ///
@@ -978,8 +978,7 @@ impl NNGenome {
             .collect();
         let recursive_gene = input_genes
             .iter()
-            .filter(|gene| gene.input() == gene.output())
-            .next();
+            .find(|gene| gene.input() == gene.output());
         let output_genes = node
             .output_genes()
             .copied()

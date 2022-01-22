@@ -1,7 +1,7 @@
 [package]
 name = "oxineat-nn"
 version = "0.1.1"
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "A neural-network implementation of the OxiNEAT crate's Genome trait."
 repository = "https://github.com/Fr4ctlize/OxiNEAT"

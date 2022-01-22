@@ -4,7 +4,7 @@ use crate::Innovation;
 use std::fmt;
 
 use rand::{thread_rng, Rng};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Genes are the principal components of genomes.
 /// They are created between two nodes, and become
@@ -20,11 +20,11 @@ pub struct Gene {
 
 impl Gene {
     /// Returns a new _unsuppressed_ gene with the specified parameters.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let gene = Gene::new(42, 3, 9, 2.0);
     /// ```
     pub fn new(id: Innovation, input: Innovation, output: Innovation, weight: f32) -> Gene {
@@ -47,20 +47,20 @@ impl Gene {
     /// distribution over the range ±[`weight_mutation_power`].
     ///
     /// [`weight_mutation_power`]: crate::genomics::GeneticConfig::weight_mutation_power
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::{Gene, GeneticConfig};
-    /// 
+    ///
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// # assert_eq!(gene.weight(), 2.0);
-    /// 
+    ///
     /// gene.randomize_weight(&GeneticConfig {
     ///     weight_bound: 5.0,
     ///     ..GeneticConfig::zero()
     /// });
-    /// 
+    ///
     /// # // The weight should change to a random value
     /// # // in the [-5.0, 5.0] range.
     /// # // NOTE: it is possible for the new value to
@@ -80,21 +80,21 @@ impl Gene {
     ///
     /// [`weight_mutation_power`]: crate::genomics::GeneticConfig::weight_mutation_power
     /// [`weight_bound`]: crate::genomics::GeneticConfig::weight_bound
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::{Gene, GeneticConfig};
-    /// 
+    ///
     /// let mut gene = Gene::new(42, 3, 9, 3.0);
-    /// 
+    ///
     /// # assert_eq!(gene.weight(), 3.0);
-    /// 
+    ///
     /// gene.nudge_weight(&GeneticConfig {
     ///     weight_mutation_power: 2.5,
     ///     weight_bound: 5.0,
     ///     ..GeneticConfig::zero()
     /// });
-    /// 
+    ///
     /// # // The weight should be nudged by a random value
     /// # // in the [-2.5, 2.5] range, and clamped into [-5.0, 5.0].
     /// # // NOTE: it is possible for the new value to be the
@@ -110,13 +110,13 @@ impl Gene {
     }
 
     /// Returns the gene's innovation number.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// assert_eq!(gene.innovation(), 42);
     /// ```
     pub fn innovation(&self) -> Innovation {
@@ -124,13 +124,13 @@ impl Gene {
     }
 
     /// Returns the gene's input node's innovation number.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// assert_eq!(gene.input(), 3);
     /// ```
     pub fn input(&self) -> Innovation {
@@ -138,13 +138,13 @@ impl Gene {
     }
 
     /// Returns the gene's output node's innovation number.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// assert_eq!(gene.output(), 9);
     /// ```
     pub fn output(&self) -> Innovation {
@@ -152,13 +152,13 @@ impl Gene {
     }
 
     /// Returns the gene's weight.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// assert_eq!(gene.weight(), 2.0);
     /// ```
     pub fn weight(&self) -> f32 {
@@ -166,17 +166,17 @@ impl Gene {
     }
 
     /// Sets the gene's weight
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// assert_eq!(gene.weight(), 2.0);
-    /// 
+    ///
     /// gene.set_weight(-5.0);
-    /// 
+    ///
     /// assert_eq!(gene.weight(), -5.0);
     /// ```
     pub fn set_weight(&mut self, w: f32) {
@@ -184,13 +184,13 @@ impl Gene {
     }
 
     /// Returns the gene's suppression status.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// assert_eq!(gene.suppressed(), false);
     /// ```
     pub fn suppressed(&self) -> bool {
@@ -198,17 +198,17 @@ impl Gene {
     }
 
     /// Sets the gene's suppression status.
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use oxineat_nn::genomics::Gene;
-    /// 
+    ///
     /// let mut gene = Gene::new(42, 3, 9, 2.0);
-    /// 
+    ///
     /// assert_eq!(gene.suppressed(), false);
-    /// 
+    ///
     /// gene.set_suppressed(true);
-    /// 
+    ///
     /// assert_eq!(gene.suppressed(), true);
     /// ```
     pub fn set_suppressed(&mut self, suppression: bool) {

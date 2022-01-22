@@ -1,8 +1,8 @@
-use super::{Population, SpeciesID};
-
-use crate::genome::{Genome, InnovationHistory};
+use crate::{Genome, InnovationHistory, Population, SpeciesID};
 
 use std::fmt;
+
+use serde::{Deserialize, Serialize};
 
 /// Defines different possible reporting levels for logging.
 #[derive(Clone, Copy, Debug)]
@@ -18,7 +18,7 @@ pub enum ReportingLevel {
 }
 
 /// A snapshot of a population.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Log<G> {
     pub generation_number: usize,
     pub generation_sample: GenerationMemberRecord<G>,
@@ -47,7 +47,7 @@ impl<G: Genome> fmt::Display for Log<G> {
 }
 
 /// A struct for reporting basic statistical data.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Stats {
     pub maximum: f32,
     pub minimum: f32,
@@ -55,7 +55,7 @@ pub struct Stats {
     pub median: f32,
 }
 
-impl Stats {
+impl<I: Iterator<Item = f32>> From<I> for Stats {
     /// Returns statistics about numbers in a sequence.
     ///
     /// # Examples
@@ -68,7 +68,7 @@ impl Stats {
     /// assert_eq!(stats.mean, 0.0);
     /// assert_eq!(stats.median, 0.5);
     /// ```
-    pub fn from(data: impl Iterator<Item = f32>) -> Stats {
+    fn from(data: I) -> Stats {
         let mut data: Vec<f32> = data.collect();
         let mid = data.len() / 2;
         let (mut max, mut min, mut sum) = (f32::MIN, f32::MAX, 0.0);
@@ -99,7 +99,7 @@ impl Stats {
 
 /// A reporting-level dependant store
 /// of genomes from a population.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum GenerationMemberRecord<G> {
     /// Species IDs, genomes and stagnation level.
     Species(Vec<(SpeciesID, Vec<G>, usize)>),
@@ -125,7 +125,7 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
     /// ```
     /// # use oxineat_nn::genomics::NNGenome as G;
     /// use oxineat::logging::{EvolutionLogger, ReportingLevel};
-    /// 
+    ///
     /// // With `G` a suitable type implementing `Genome`...
     /// let logger = EvolutionLogger::<G>::new(ReportingLevel::NoGenomes);
     /// ```
@@ -137,8 +137,8 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
     }
 
     /// Store a snapshot of a population.
-    /// 
-    /// The `genome_stat_extractor` provides a way of 
+    ///
+    /// The `genome_stat_extractor` provides a way of
     /// obtaining arbitrary statistics on the population,
     /// where each statistic is named by `stat_names`.
     ///
@@ -157,27 +157,28 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
     /// // Then log a snapshot.
     /// logger.log(&population, &|g| [g.fitness()], ["fitness"]);
     /// ```
-    pub fn log<C, H, GSE, const N: usize>(
+    pub fn log<'a, C, H, GSE, const N: usize>(
         &mut self,
-        population: &Population<C, H, G>,
+        population: impl Into<&'a Population<C, H, G>>,
         genome_stat_extractor: &GSE,
         stat_names: [&str; N],
     ) where
-        H: InnovationHistory<Config = C>,
-        G: Genome<InnovationHistory = H, Config = C>,
+        C: 'a,
+        H: InnovationHistory<Config = C> + 'a,
+        G: Genome<InnovationHistory = H, Config = C> + 'a,
         GSE: Fn(&G) -> [f32; N],
     {
-        let stats: Vec<[f32; N]> = population
+        let population = population.into();
+        let stats = population
             .species
             .iter()
             .flat_map(|s| s.genomes.iter())
-            .map(genome_stat_extractor)
-            .collect();
+            .map(genome_stat_extractor);
         let stats = stat_names
             .iter()
             .cloned()
             .map(String::from)
-            .zip(unzip_n_vecs(stats.into_iter()))
+            .zip(unzip_n_vecs(stats))
             .map(|(name, data)| (name, Stats::from(data.into_iter())))
             .collect();
         self.logs.push(Log {
@@ -224,13 +225,11 @@ impl<G: Genome + Clone> EvolutionLogger<G> {
     }
 }
 
-fn unzip_n_vecs<T: Clone, const N: usize>(mut iter: impl Iterator<Item = [T; N]>) -> Vec<Vec<T>> {
+fn unzip_n_vecs<T: Clone, const N: usize>(iter: impl Iterator<Item = [T; N]>) -> Vec<Vec<T>> {
     let mut vecs = vec![Vec::default(); N];
-    while let Some(items) = iter.next() {
-        let mut i = 0;
-        for item in items {
+    for items in iter {
+        for (i, item) in items.into_iter().enumerate() {
             vecs[i].push(item);
-            i += 1;
         }
     }
     vecs

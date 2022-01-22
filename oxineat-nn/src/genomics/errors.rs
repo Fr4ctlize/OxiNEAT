@@ -1,7 +1,7 @@
+use crate::Innovation;
+
 use std::error::Error;
 use std::fmt;
-
-use crate::Innovation;
 
 /// An error type indicating the attempted
 /// removal of an item that is absent in the genome.

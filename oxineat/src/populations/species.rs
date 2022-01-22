@@ -124,6 +124,11 @@ impl<G: Genome + Clone> Species<G> {
     /// # assert!(species.genomes().find(|g| *g == &genome).is_some());
     /// ```
     pub fn add_genome(&mut self, genome: G) {
+        // IF CHANGING THIS, MAKE SURE TO MODIFY RealTimePopulation's ACCORDINGLY:
+        //     - RealTimePopulation::insert depends on this to retrieve
+        //         last inserted genome quickly.
+        //     - Type invariant requires genomes to always be ordered by insertion
+        //         seniority.
         self.genomes.push(genome);
     }
 

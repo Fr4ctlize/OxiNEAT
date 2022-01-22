@@ -1,12 +1,12 @@
 use crate::genomics::errors::{AbsentEntryRemoval, GeneValidityError};
 use crate::Innovation;
 
-use ahash::RandomState;
-use serde::{Deserialize, Serialize};
-
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
+
+use ahash::RandomState;
+use serde::{Deserialize, Serialize};
 
 /// An ActivationType represents the type
 /// of activation function the node's network

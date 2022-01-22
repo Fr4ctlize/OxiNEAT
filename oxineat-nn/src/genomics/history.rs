@@ -1,11 +1,11 @@
 use crate::genomics::GeneticConfig;
 use crate::Innovation;
 
+use std::collections::hash_map::{Entry, HashMap};
+
 use ahash::RandomState;
 use oxineat::InnovationHistory;
 use serde::{Deserialize, Serialize};
-
-use std::collections::hash_map::{Entry, HashMap};
 
 /// A `History` keeps track of gene and node innovations in a
 /// population, in order to make sure identical mutations
@@ -209,7 +209,7 @@ impl History {
     ///     ..GeneticConfig::zero()
     /// };
     /// let mut history = History::new(&config);
-    /// 
+    ///
     /// // Add mutations to the history through genome mutation.
     /// NNGenome::new(&config).mutate_add_gene(&mut history, &config);
     ///
@@ -238,7 +238,7 @@ impl History {
     ///     ..GeneticConfig::zero()
     /// };
     /// let mut history = History::new(&config);
-    /// 
+    ///
     /// // Add mutations to the history through genome mutation.
     /// NNGenome::new(&config).mutate_add_node(&mut history, &config);
     ///

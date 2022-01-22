@@ -9,11 +9,12 @@ mod offspring_factory;
 mod rt_population;
 mod species;
 
-use crate::{Genome, InnovationHistory};
 pub use config::PopulationConfig;
 use errors::*;
 use offspring_factory::OffspringFactory;
 pub use species::{Species, SpeciesID};
+
+use crate::{Genome, InnovationHistory};
 
 use rand::prelude::Rng;
 use serde::{Deserialize, Serialize};
@@ -161,7 +162,7 @@ where
         let species_count = species.len();
 
         Some(Population {
-            species: species,
+            species,
             history: H::new(&genetic_config),
             generation: 0,
             historical_species_count: species_count,
@@ -189,7 +190,7 @@ where
     /// );
     ///
     /// population.evaluate_fitness(|g| {
-    ///     # let mut network = FunctionApproximatorNetwork::from::<1>(g);
+    ///     # let mut network = FunctionApproximatorNetwork::<1>::from(g);
     ///     # // Networks with outputs closer to 0 are given higher scores.
     ///     # let fitness = (1.0 - (network.evaluate_at(&[1.0])[0] - 0.0)).powf(2.0);
     ///     // Compute genome's fitness...
@@ -249,7 +250,7 @@ where
     /// );
     ///
     /// population.evaluate_fitness(|g| {
-    ///     # let mut network = FunctionApproximatorNetwork::from::<1>(g);
+    ///     # let mut network = FunctionApproximatorNetwork::<1>::from(g);
     ///     # // Networks with outputs closer to 0 are given higher scores.
     ///     # let fitness = (1.0 - (network.evaluate_at(&[1.0])[0] - 0.0)).powf(2.0);
     ///     // Compute genome's fitness...
@@ -373,10 +374,8 @@ where
         let mut new_species_count = 0;
         // Reassign removed genomes.
         for genome in self.drain_incompatible_genomes_from_species() {
-            if self.respeciate(
-                genome,
-                SpeciesID(self.historical_species_count, new_species_count),
-            ) {
+            let next_species_id = SpeciesID(self.historical_species_count, new_species_count);
+            if self.respeciate(genome, next_species_id) == next_species_id {
                 new_species_count += 1;
             }
         }
@@ -385,22 +384,22 @@ where
         }
     }
 
-    /// Assigns a genome to a speces based on genetic distance
-    /// to species representatives. Returns whether a new species
-    /// was created to house the genome.
-    fn respeciate(&mut self, genome: G, new_species_id: SpeciesID) -> bool {
+    /// Assigns a genome to a species based on genetic distance
+    /// to species representatives. Returns the SpeciesID of the
+    /// species the genome was placed in.
+    fn respeciate(&mut self, genome: G, new_species_id: SpeciesID) -> SpeciesID {
         // Assign if possible to a currently existing species.
         for species in &mut self.species {
             if Genome::genetic_distance(&genome, species.representative(), &self.genetic_config)
                 < self.population_config.distance_threshold
             {
                 species.add_genome(genome);
-                return false;
+                return species.id();
             }
         }
         // Create a new species if a compatible one has not been found.
         self.species.push(Species::new(new_species_id, genome));
-        true
+        new_species_id
     }
 
     /// Removes and returns all genomes incompatible with their
@@ -430,17 +429,10 @@ where
     }
 
     /// Removes all extinct (0 assigned offspring)
-    /// species from the population.
+    /// species from the population. Maintains the order
+    /// of species by species ID.
     fn remove_extinct_species(&mut self) {
-        let mut i = 0;
-        while i < self.species.len() {
-            if self.species[i].genomes.is_empty() {
-                self.species.swap_remove(i);
-            } else {
-                i += 1;
-            }
-        }
-        self.species.sort_unstable_by_key(|s| s.id());
+        self.species.retain(|s| !s.genomes.is_empty());
     }
 
     /// Resets the population to an initial randomized state.
